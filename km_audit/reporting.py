@@ -34,9 +34,11 @@ PAGE_MARGIN = 1.5 * cm
 USABLE_WIDTH = A4[0] - 2 * PAGE_MARGIN  # 18 cm
 
 # 5-column layout for the per-category rule tables, fits USABLE_WIDTH.
-COL_RULE = 6.0 * cm
-COL_STATUS = 1.4 * cm
-COL_SEVERITY = 1.6 * cm
+# Severity uses 3-letter codes (BLOC/MAJ/MIN) so the column stays narrow
+# and the rule title gets more horizontal room.
+COL_RULE = 6.4 * cm
+COL_STATUS = 1.2 * cm
+COL_SEVERITY = 1.2 * cm
 COL_EVIDENCE = 4.6 * cm
 COL_RECO = USABLE_WIDTH - COL_RULE - COL_STATUS - COL_SEVERITY - COL_EVIDENCE
 
@@ -51,6 +53,8 @@ _STATUS_LABEL = {
     Status.WARN: "WARN",
     Status.NOT_VERIFIABLE: "N/V",
 }
+
+_SEVERITY_LABEL = {"BLOCKER": "BLOC", "MAJOR": "MAJ", "MINOR": "MIN"}
 
 
 def _verdict_color(verdict: str):
@@ -102,7 +106,16 @@ _CELL_STATUS_BASE = _cell_style("CellStatus", alignment=1, fontName="Helvetica-B
 
 
 def _cell(text: str, style: ParagraphStyle = _CELL) -> Paragraph:
+    """Plain-text cell. Escapes HTML-significant chars so the source
+    text is rendered verbatim (no surprise interpretation of ``<`` or
+    ``&``)."""
     return Paragraph(escape(text or "—"), style)
+
+
+def _cell_html(html: str, style: ParagraphStyle = _CELL) -> Paragraph:
+    """HTML-aware cell. Caller is responsible for escaping any
+    user-provided text inside the markup."""
+    return Paragraph(html or "—", style)
 
 
 def _status_cell(status: Status) -> Paragraph:
@@ -218,7 +231,7 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
                 _cell(f"{r.rule_id} – {r.title}"),
                 _cell(CATEGORIES.get(r.category, r.category)),
                 _cell(r.severity.value),
-                Paragraph(evidence_html, _CELL),
+                _cell_html(evidence_html, _CELL),
             ])
         synth_widths = [
             5.0 * cm, 4.5 * cm, 1.8 * cm,
@@ -248,9 +261,12 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
         ]]
         for r in cat_rules:
             rows.append([
-                _cell(f"<b>{escape(r.rule_id)}</b> {escape(r.title)}", _CELL),
+                _cell_html(
+                    f"<b>{escape(r.rule_id)}</b> {escape(r.title)}",
+                    _CELL,
+                ),
                 _status_cell(r.status),
-                _cell(r.severity.value),
+                _cell(_SEVERITY_LABEL.get(r.severity.value, r.severity.value)),
                 _cell(r.evidence),
                 _cell(r.recommendation),
             ])
