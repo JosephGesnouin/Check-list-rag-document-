@@ -114,8 +114,8 @@ def scenario_green(c: Certifier) -> Optional[DocumentAuditResult]:
             f"non-PASS blockers="
             f"{[r.rule_id for r in res.rules if r.severity.value == 'BLOCKER' and r.status is not Status.PASS]}")
     c.check("Cartouche email correctly classified as author",
-            not any(r.rule_id == "H34" and r.status is Status.FAIL for r in res.rules),
-            "H34 must be PASS for the reference doc")
+            not any(r.rule_id == "H28" and r.status is Status.FAIL for r in res.rules),
+            "H28 must be PASS for the reference doc")
     return res
 
 
@@ -125,7 +125,7 @@ def scenario_red(c: Certifier) -> Optional[DocumentAuditResult]:
     res = audit_document(BAD_FILENAME, raw, DEFAULT_SETTINGS)
     c.check("Bad doc → Feu Rouge", res.verdict == "Feu Rouge", _summarize(res))
     fail_ids = _failed_rule_ids(res)
-    expected_min = {"A1", "A3", "A5", "B9", "F26", "H34"}
+    expected_min = {"A1", "A3", "A4", "B5", "B6", "C7", "C9", "G26", "H28"}
     c.check("Bad doc raises the expected blocker set",
             expected_min.issubset(set(fail_ids)),
             f"got={fail_ids}")
@@ -160,7 +160,7 @@ def scenario_remediation(c: Certifier, bad_audit: DocumentAuditResult) -> None:
     c.check("Re-audit reduces blocker count",
             len(re_res.blocking_failures) < len(bad_audit.blocking_failures),
             f"{len(bad_audit.blocking_failures)} -> {len(re_res.blocking_failures)}")
-    auto_remediated = {"A1", "A3", "A5", "B9", "F26", "H34"}
+    auto_remediated = {"A1", "A3", "A4", "C9", "G26", "H28"}
     remaining = {r.rule_id for r in re_res.failures}
     c.check("Auto-remediable failures are resolved",
             not (auto_remediated & remaining),
@@ -196,10 +196,21 @@ def scenario_outputs(c: Certifier, ref_audit: DocumentAuditResult) -> None:
 def scenario_registry(c: Certifier) -> None:
     print("\n[5] Registry — rule discovery")
     rules = all_rules()
-    c.check("Registry has 30 rules", len(rules) == 30, f"count={len(rules)}")
+    expected = (
+        {f"A{i}" for i in (1, 2, 3, 4)}
+        | {f"B{i}" for i in (5, 6)}
+        | {f"C{i}" for i in (7, 8, 9)}
+        | {f"D{i}" for i in (10, 11)}
+        | {f"E{i}" for i in (12, 13, 14, 15, 16, 17, 18, 19)}
+        | {f"F{i}" for i in (20, 21, 22, 23, 24)}
+        | {f"G{i}" for i in (25, 26, 27)}
+        | {"H28"}
+        | {f"I{i}" for i in (29, 30, 31, 32, 33, 34, 35)}
+    )
+    c.check(f"Registry has {len(expected)} rules", len(rules) == len(expected),
+            f"count={len(rules)}")
     rule_ids = []
     for fn in rules:
-        # Probe each rule against an empty ParsedDoc to read the rule_id.
         from km_audit.models import ParsedDoc
         empty = ParsedDoc(file_name="probe.docx", file_type="docx", raw_bytes=b"")
         try:
@@ -207,17 +218,12 @@ def scenario_registry(c: Certifier) -> None:
             rule_ids.append(r.rule_id)
         except Exception as exc:
             c.check(f"Rule {fn.__name__} executes on empty doc", False, str(exc))
-    expected = {f"A{i}" for i in (1, 2, 3, 4, 5)} | \
-        {f"B{i}" for i in (6, 7, 8, 9)} | \
-        {"C10", "C11"} | \
-        {f"D{i}" for i in (12, 13, 14, 15, 16, 17, 18)} | \
-        {"E19"} | \
-        {f"F{i}" for i in (25, 26, 27)} | \
-        {f"G{i}" for i in (28, 29, 30, 31, 32, 33, 34)} | \
-        {"H34"}
     c.check("All expected rule IDs are present",
             expected.issubset(set(rule_ids)),
             f"missing={sorted(expected - set(rule_ids))}")
+    c.check("No unexpected rule IDs",
+            set(rule_ids).issubset(expected),
+            f"unexpected={sorted(set(rule_ids) - expected)}")
 
 
 def main() -> int:

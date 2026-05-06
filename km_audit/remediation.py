@@ -85,9 +85,20 @@ class RemediationPlan:
 
 
 def build_plan(result: DocumentAuditResult) -> RemediationPlan:
-    """Translate failed/remediable rules into a concrete action list."""
+    """Translate failed/remediable rules into a concrete action list.
+
+    Mapping rule_id → action :
+        A1  rename_file        A2  inject_cartouche
+        A3  inject_objective   A4  inject_glossary
+        C9  replace_symbols    E17 replace_symbols (mutualisé)
+        G26 clean_urls         H28 redact_sensitive
+    """
     plan = RemediationPlan(file_name=result.file_name, file_type=result.file_type)
-    failing = {r.rule_id: r for r in result.rules if r.status in (Status.FAIL, Status.WARN, Status.NOT_VERIFIABLE)}
+    failing = {
+        r.rule_id: r
+        for r in result.rules
+        if r.status in (Status.FAIL, Status.WARN, Status.NOT_VERIFIABLE)
+    }
 
     if "A1" in failing and failing["A1"].status is Status.FAIL:
         plan.actions.append(_action_rename(result, failing["A1"]))
@@ -95,13 +106,13 @@ def build_plan(result: DocumentAuditResult) -> RemediationPlan:
         plan.actions.append(_action_cartouche(result, failing["A2"]))
     if "A3" in failing and failing["A3"].status is Status.FAIL:
         plan.actions.append(_action_objective(failing["A3"]))
-    if "A5" in failing and failing["A5"].status is Status.FAIL:
-        plan.actions.append(_action_glossary(failing["A5"]))
-    if any(rid in failing and failing[rid].status is Status.FAIL for rid in ("B9", "D16")):
+    if "A4" in failing and failing["A4"].status is Status.FAIL:
+        plan.actions.append(_action_glossary(failing["A4"]))
+    if any(rid in failing and failing[rid].status is Status.FAIL for rid in ("C9", "E17")):
         plan.actions.append(_action_replace_symbols())
-    if "F26" in failing and failing["F26"].status is Status.FAIL:
+    if "G26" in failing and failing["G26"].status is Status.FAIL:
         plan.actions.append(_action_clean_urls())
-    if "H34" in failing and failing["H34"].status is Status.FAIL:
+    if "H28" in failing and failing["H28"].status is Status.FAIL:
         plan.actions.append(_action_redact_sensitive())
 
     return plan
@@ -153,7 +164,7 @@ def _action_glossary(rule: RuleResult) -> RemediationAction:
 def _action_replace_symbols() -> RemediationAction:
     return RemediationAction(
         kind=ActionKind.REPLACE_SYMBOLS,
-        rule_id="B9/D16",
+        rule_id="C9/E17",
         title="Remplacer les symboles (✓, ✗, ➜, ...) par des mots",
         description="Substitue les pictogrammes par leur équivalent textuel (oui/non/->) dans paragraphes et tableaux.",
         applicable_formats=("docx",),
@@ -163,7 +174,7 @@ def _action_replace_symbols() -> RemediationAction:
 def _action_clean_urls() -> RemediationAction:
     return RemediationAction(
         kind=ActionKind.CLEAN_URLS,
-        rule_id="F26",
+        rule_id="G26",
         title="Nettoyer les paramètres de tracking dans les URLs",
         description="Retire les paramètres utm_/token/session/gclid/fbclid/auth/tracking des URLs en clair et des hyperliens.",
         applicable_formats=("docx",),
@@ -173,9 +184,9 @@ def _action_clean_urls() -> RemediationAction:
 def _action_redact_sensitive() -> RemediationAction:
     return RemediationAction(
         kind=ActionKind.REDACT_SENSITIVE,
-        rule_id="H34",
+        rule_id="H28",
         title="Masquer les données sensibles détectées",
-        description="Remplace emails/téléphones/IBAN par leur version masquée (j***@domaine.com, etc.).",
+        description="Remplace emails/téléphones/IBAN/adresses par leur version masquée.",
         applicable_formats=("docx",),
     )
 

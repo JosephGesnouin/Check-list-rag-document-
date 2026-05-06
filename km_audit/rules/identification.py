@@ -1,10 +1,17 @@
-"""Category A – Document identification (BLOCKER)."""
+"""Catégorie A — Permettre l'identification du document (BLOQUANT).
+
+Items officiels :
+  A1  Le nom du document suit-il la norme de nommage ?
+  A2  Les informations du document (cartouche/métadonnées) sont-elles renseignées ?
+  A3  Y a-t-il une description claire de l'objectif dans les métadonnées ?
+  A4  Les acronymes / termes spécialisés présents ont-ils été ajoutés
+      (ou vérifiés) dans le glossaire de domaine centralisé ?
+"""
 from __future__ import annotations
 
 import re
 
 from ..config import (
-    ACRONYM_RE,
     GLOSSARY_HINTS,
     NAMING_REGEX,
     OBJECTIVE_HINTS,
@@ -20,11 +27,13 @@ from ._helpers import full_text
 def rule_naming(p: ParsedDoc, _: Settings) -> RuleResult:
     if NAMING_REGEX.match(p.file_name):
         return RuleResult(
-            "A1", "A", "Nommage du fichier (AAAAMMJJ_Sujet_Type_Extra.ext)",
+            "A1", "A",
+            "Nom du document conforme (AAAAMMJJ_Sujet_Type_Infos)",
             Status.PASS, Severity.BLOCKER, evidence=p.file_name,
         )
     return RuleResult(
-        "A1", "A", "Nommage du fichier (AAAAMMJJ_Sujet_Type_Extra.ext)",
+        "A1", "A",
+        "Nom du document conforme (AAAAMMJJ_Sujet_Type_Infos)",
         Status.FAIL, Severity.BLOCKER, evidence=p.file_name,
         recommendation=(
             "Renommer au format AAAAMMJJ_Sujet_TypeDeDocument(_Infos).ext, "
@@ -35,7 +44,7 @@ def rule_naming(p: ParsedDoc, _: Settings) -> RuleResult:
 
 
 @register
-def rule_cartouche(p: ParsedDoc, _: Settings) -> RuleResult:
+def rule_metadata(p: ParsedDoc, _: Settings) -> RuleResult:
     text = full_text(p)
     head = text[:4000]
     found, missing = [], []
@@ -55,19 +64,19 @@ def rule_cartouche(p: ParsedDoc, _: Settings) -> RuleResult:
 
     if not missing:
         return RuleResult(
-            "A2", "A", "Cartouche renseigné (champs obligatoires)",
+            "A2", "A", "Informations du document renseignées (cartouche / métadonnées)",
             Status.PASS, Severity.BLOCKER, evidence=", ".join(found),
         )
     if len(found) >= 4:
         return RuleResult(
-            "A2", "A", "Cartouche renseigné (champs obligatoires)",
+            "A2", "A", "Informations du document renseignées (cartouche / métadonnées)",
             Status.FAIL, Severity.BLOCKER,
             evidence=f"Détectés: {', '.join(found)} | Manquants: {', '.join(missing)}",
             recommendation="Ajouter les champs manquants dans la section Cartouche.",
             remediable=True,
         )
     return RuleResult(
-        "A2", "A", "Cartouche renseigné (champs obligatoires)",
+        "A2", "A", "Informations du document renseignées (cartouche / métadonnées)",
         Status.NOT_VERIFIABLE, Severity.BLOCKER,
         evidence="Cartouche non détecté automatiquement.",
         recommendation="Vérifier manuellement la présence d'un cartouche conforme.",
@@ -80,53 +89,17 @@ def rule_objective(p: ParsedDoc, _: Settings) -> RuleResult:
     head = full_text(p)[:3000].lower()
     if any(h in head for h in OBJECTIVE_HINTS):
         return RuleResult(
-            "A3", "A", "Objectif/description en début de document",
+            "A3", "A",
+            "Description claire de l'objectif dans les métadonnées",
             Status.PASS, Severity.BLOCKER,
             evidence="Section objectif/description détectée",
         )
     return RuleResult(
-        "A3", "A", "Objectif/description en début de document",
+        "A3", "A",
+        "Description claire de l'objectif dans les métadonnées",
         Status.FAIL, Severity.BLOCKER,
-        recommendation="Ajouter une section Objectif/Description dans les premières pages.",
+        recommendation="Ajouter une section Objectif/Description dans les métadonnées ou en tête.",
         remediable=True,
-    )
-
-
-@register
-def rule_acronyms(p: ParsedDoc, _: Settings) -> RuleResult:
-    text = full_text(p)
-    candidates = {
-        a for a in ACRONYM_RE.findall(text)
-        if a not in {"PDF", "DOCX", "PPTX", "XLSX"}
-    }
-    if not candidates:
-        return RuleResult(
-            "A4", "A", "Acronymes développés à la 1re occurrence",
-            Status.PASS, Severity.BLOCKER, evidence="Aucun acronyme détecté",
-        )
-    undocumented = []
-    for ac in candidates:
-        first = re.search(rf"\b{re.escape(ac)}\b", text)
-        if not first:
-            continue
-        window = text[max(0, first.start() - 80): first.start() + 200]
-        if not (
-            re.search(rf"{ac}\s*\(([^)]+)\)", window)
-            or re.search(rf"{ac}\s*[:\-–]\s*[A-Za-zÀ-ÿ]", window)
-            or re.search(rf"[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-]{{2,}}\s*\(\s*{ac}\s*\)", window)
-        ):
-            undocumented.append(ac)
-    if not undocumented:
-        return RuleResult(
-            "A4", "A", "Acronymes développés à la 1re occurrence",
-            Status.PASS, Severity.BLOCKER,
-            evidence=f"{len(candidates)} acronymes détectés, tous documentés",
-        )
-    return RuleResult(
-        "A4", "A", "Acronymes développés à la 1re occurrence",
-        Status.FAIL, Severity.BLOCKER,
-        evidence=f"Non développés: {', '.join(sorted(undocumented)[:15])}",
-        recommendation="Développer chaque acronyme à sa première occurrence: ACR (Définition).",
     )
 
 
@@ -135,13 +108,15 @@ def rule_glossary(p: ParsedDoc, _: Settings) -> RuleResult:
     text = full_text(p).lower()
     if any(h in text for h in GLOSSARY_HINTS):
         return RuleResult(
-            "A5", "A", "Glossaire / liste d'acronymes présent",
+            "A4", "A",
+            "Acronymes/termes ajoutés (ou vérifiés) au glossaire centralisé",
             Status.PASS, Severity.BLOCKER,
             evidence="Section glossaire/acronymes détectée",
         )
     return RuleResult(
-        "A5", "A", "Glossaire / liste d'acronymes présent",
+        "A4", "A",
+        "Acronymes/termes ajoutés (ou vérifiés) au glossaire centralisé",
         Status.FAIL, Severity.BLOCKER,
-        recommendation="Ajouter une section Glossaire en fin de document.",
+        recommendation="Ajouter une section Glossaire centralisée en fin de document.",
         remediable=True,
     )

@@ -210,44 +210,53 @@ class DocumentAuditResult:
 
 ## Checklist – règles évaluées
 
-29 règles regroupées en 8 catégories. Sévérité **BLOQUANT** (B) marque
-les normes ; un seul échec bloquant ⇒ verdict **Feu Rouge** quel que
-soit le score.
+35 règles regroupées en 9 catégories alignées sur la typologie officielle
+*KM Initiative readiness*. Sévérité **BLOQUANT** (B) marque les normes ;
+un seul échec bloquant ⇒ verdict **Feu Rouge** quel que soit le score.
 
-| ID  | Catégorie         | Règle                                                  | Sévérité | Remédiable |
-|-----|-------------------|--------------------------------------------------------|----------|------------|
-| A1  | Identification    | Nommage `AAAAMMJJ_Sujet_Type[_Extra].ext`              | B        | oui        |
-| A2  | Identification    | Cartouche présent (10 champs obligatoires)             | B        | oui        |
-| A3  | Identification    | Section Objectif/Description en début                  | B        | oui        |
-| A4  | Identification    | Acronymes développés à la 1re occurrence               | B        | non        |
-| A5  | Identification    | Glossaire / liste d'acronymes                          | B        | oui        |
-| B6  | Structure         | Titres descriptifs et hiérarchisés                     | B        | non        |
-| B7  | Structure         | Densité de titres suffisante                           | B        | non        |
-| B8  | Structure         | Pas de boîtes/cadres inutiles (PPTX)                   | B        | non        |
-| B9  | Structure         | Pas de symboles dans les phrases (✓ ➜ etc.)            | B        | oui        |
-| C10 | Images            | Légende sous chaque image informative                  | B / MAJ  | non        |
-| C11 | Images            | Résolution + variance Laplacien (flou)                 | MAJ      | non        |
-| D12 | Tableaux          | Pas de cellules fusionnées                             | B        | non        |
-| D13 | Tableaux          | Bordures visibles (XLSX uniquement vérifiable)         | MAJ/MIN  | non        |
-| D14 | Tableaux          | En-têtes mis en valeur                                 | MAJ      | non        |
-| D15 | Tableaux          | Titre + légende au-dessus des tableaux                 | MAJ      | non        |
-| D16 | Tableaux          | Pas de symboles dans les cellules                      | MAJ      | oui        |
-| D17 | Tableaux          | Pagination/en-têtes répétés (NV automatique)           | MIN      | non        |
-| D18 | Tableaux          | Tableau natif (pas une image)                          | B        | non        |
-| E19 | Diagrammes        | Slides non surchargés, libellés non génériques (PPTX)  | MIN      | non        |
-| F25 | URLs              | URL introduite par un texte de contexte                | MAJ      | non        |
-| F26 | URLs              | URL nettoyée (utm/token/session/gclid…)                | MAJ      | oui        |
-| F27 | URLs              | URL affichée en clair (pas masquée)                    | MAJ      | non        |
-| G28 | Bonnes pratiques  | Pas de coupures de mots                                | MIN      | non        |
-| G29 | Bonnes pratiques  | Format DOCX privilégié                                 | MIN      | non        |
-| G30 | Bonnes pratiques  | Document de longueur raisonnable                       | MIN      | non        |
-| G31 | Bonnes pratiques  | Pas d'en-têtes/pieds de page superflus                 | MIN      | non        |
-| G32 | Bonnes pratiques  | Phrases courtes et simples                             | MIN      | non        |
-| G33 | Bonnes pratiques  | Alignement à gauche (PPT/PDF)                          | MIN      | non        |
-| G34 | Bonnes pratiques  | Paragraphes ≤ `max_paragraph_chars`                    | MIN      | non        |
-| H34 | Données sensibles | Aucune donnée client / personnelle détectée            | B        | oui        |
+| ID  | Catégorie                                | Règle                                                                      | Sévérité | Remédiable |
+|-----|------------------------------------------|----------------------------------------------------------------------------|----------|------------|
+| A1  | Permettre l'identification du document   | Nom du document conforme (AAAAMMJJ_Sujet_Type_Infos)                       | B        | oui        |
+| A2  | Permettre l'identification du document   | Informations renseignées (cartouche / métadonnées)                         | B        | oui        |
+| A3  | Permettre l'identification du document   | Description claire de l'objectif dans les métadonnées                      | B        | oui        |
+| A4  | Permettre l'identification du document   | Acronymes/termes ajoutés (ou vérifiés) au glossaire centralisé             | B        | oui        |
+| B5  | Mise en forme du document et sa structure| Titres descriptifs, hiérarchisés et correctement formatés                  | B        | non        |
+| B6  | Mise en forme du document et sa structure| Titres et sous-titres suffisants                                           | B        | non        |
+| C7  | Mise en forme du texte                   | Acronymes/abréviations expliqués à leur 1re apparition                     | B        | non        |
+| C8  | Mise en forme du texte                   | Texte hors boîtes/cadres (textbox) inutiles                                | B / MAJ  | non        |
+| C9  | Mise en forme du texte                   | Pas de logos/symboles/icônes dans les phrases                              | B        | oui        |
+| D10 | Gestion des images                       | Légende sous chaque image informative                                      | B / MAJ  | non        |
+| D11 | Gestion des images                       | Qualité des images (résolution, netteté)                                   | MAJ      | non        |
+| E12 | Gestion des tableaux                     | Pas de cellules fusionnées                                                 | B        | non        |
+| E13 | Gestion des tableaux                     | Bordures visibles (idéalement noires sur fond blanc)                       | MAJ/MIN  | non        |
+| E14 | Gestion des tableaux                     | En-têtes de colonnes clairs et mis en valeur                               | MAJ      | non        |
+| E15 | Gestion des tableaux                     | Titre explicite au-dessus du tableau                                       | MAJ      | non        |
+| E16 | Gestion des tableaux                     | Légende décrivant le contenu du tableau                                    | MAJ      | non        |
+| E17 | Gestion des tableaux                     | Symboles / codes couleurs remplacés par des mots                           | MAJ      | oui        |
+| E18 | Gestion des tableaux                     | Pagination / en-têtes répétés sur plusieurs pages                          | MIN      | non        |
+| E19 | Gestion des tableaux                     | Tableau au format natif (pas image / capture)                              | B        | non        |
+| F20 | Gestion des diagrammes / schémas         | Éléments des diagrammes nommés précisément (pas « Étape 1 »)               | MIN      | non        |
+| F21 | Gestion des diagrammes / schémas         | Structures allégées (pas de surcharge)                                     | MIN      | non        |
+| F22 | Gestion des diagrammes / schémas         | Diagrammes découpés en sous-diagrammes thématiques                         | MIN      | non        |
+| F23 | Gestion des diagrammes / schémas         | Texte structuré privilégié si plus accessible                              | MIN      | non        |
+| F24 | Gestion des diagrammes / schémas         | Légende explicative décrivant la logique                                   | MIN      | non        |
+| G25 | Gestion des URLs                         | URLs introduites par un texte clair (contexte)                             | MAJ      | non        |
+| G26 | Gestion des URLs                         | URLs nettoyées (paramètres session/tracking retirés)                       | MAJ      | oui        |
+| G27 | Gestion des URLs                         | URLs affichées en clair (pas masquées)                                     | MAJ      | non        |
+| H28 | Données sensibles                        | Aucune donnée client / personnelle détectée                                | B        | oui        |
+| I29 | Bonnes pratiques générales               | Pas de coupures de mots/paragraphes                                        | MIN      | non        |
+| I30 | Bonnes pratiques générales               | Format DOCX privilégié                                                     | MIN      | non        |
+| I31 | Bonnes pratiques générales               | Document de longueur raisonnable                                           | MIN      | non        |
+| I32 | Bonnes pratiques générales               | Pas d'en-têtes/pieds de page superflus                                     | MIN      | non        |
+| I33 | Bonnes pratiques générales               | Phrases courtes et simples                                                 | MIN      | non        |
+| I34 | Bonnes pratiques générales               | Alignement à gauche (PPT/PDF)                                              | MIN      | non        |
+| I35 | Bonnes pratiques générales               | Paragraphes ≤ `max_paragraph_chars`                                        | MIN      | non        |
 
-### Détection des données sensibles (H34)
+Catégories **A à G** correspondent à la typologie officielle ; **H** et
+**I** sont des extensions imposées par le dispositif KM (sécurité data
++ bonnes pratiques générales).
+
+### Détection des données sensibles (H28)
 
 `km_audit/sensitive.py` repère :
 
@@ -263,13 +272,16 @@ Les valeurs détectées sont **masquées** dans le rapport PDF
 
 ### Heuristiques notables
 
-- **Hiérarchie de titres** : DOCX via styles `Heading N`, PPTX via
+- **Hiérarchie de titres (B5)** : DOCX via styles `Heading N`, PPTX via
   titres de slide, PDF via heuristique sur lignes courtes/numérotées.
-- **Qualité image** : variance d'un noyau Laplacien 3×3 appliqué via
-  PIL, comparée à `blur_variance_threshold`.
-- **Acronymes** : `\b[A-Z]{2,10}\b` puis recherche de
-  `ACR (Définition)` ou `ACR : Définition` autour de la première
-  occurrence.
+- **Qualité image (D11)** : variance d'un noyau Laplacien 3×3 appliqué
+  via PIL, comparée à `blur_variance_threshold`.
+- **Acronymes (C7)** : `\b[A-Z]{2,10}\b` puis recherche de
+  `ACR (Définition)`, `ACR : Définition`, ou `Définition (ACR)` autour
+  de la première occurrence.
+- **Diagrammes (F20-F24)** : heuristiques PPTX sur le nombre de shapes
+  par slide (≥15 surchargé, ≥20 candidat texte alternatif, ≥25
+  hyper-dense) et la présence de libellés génériques type « Étape N ».
 
 ---
 
@@ -303,15 +315,15 @@ typés et applique celles que l'utilisateur sélectionne.
 
 ### Actions disponibles
 
-| `ActionKind`        | Déclenchée par | Effet (DOCX)                                                              |
-|---------------------|----------------|---------------------------------------------------------------------------|
-| `RENAME_FILE`       | A1 FAIL        | Suggère `AAAAMMJJ_<Sujet>_KMDoc[_Extra].ext`                              |
-| `INJECT_CARTOUCHE`  | A2 FAIL/NV     | Insère un titre + paragraphes pour les 10 champs obligatoires             |
-| `INJECT_OBJECTIVE`  | A3 FAIL        | Insère une section Objectif à compléter après le cartouche                |
-| `INJECT_GLOSSARY`   | A5 FAIL        | Ajoute une section Glossaire + tableau acronyme/définition en fin         |
-| `REPLACE_SYMBOLS`   | B9/D16 FAIL    | Substitue ✓ → oui, ✗ → non, ➜ → ->, … dans paragraphes et cellules        |
-| `CLEAN_URLS`        | F26 FAIL       | Retire `utm_*`, `gclid`, `fbclid`, `session*`, `token`, `auth`, `tracking`|
-| `REDACT_SENSITIVE`  | H34 FAIL       | Remplace les emails/téléphones/IBAN par leur version masquée              |
+| `ActionKind`        | Déclenchée par | Effet (DOCX)                                                                |
+|---------------------|----------------|-----------------------------------------------------------------------------|
+| `RENAME_FILE`       | A1 FAIL        | Suggère `AAAAMMJJ_<Sujet>_KMDoc[_Extra].ext`                                |
+| `INJECT_CARTOUCHE`  | A2 FAIL/NV     | Insère un titre + paragraphes pour les 10 champs obligatoires               |
+| `INJECT_OBJECTIVE`  | A3 FAIL        | Insère une section Objectif à compléter après le cartouche                  |
+| `INJECT_GLOSSARY`   | A4 FAIL        | Ajoute une section Glossaire + tableau acronyme/définition en fin           |
+| `REPLACE_SYMBOLS`   | C9/E17 FAIL    | Substitue ✓ → oui, ✗ → non, ➜ → ->, … dans paragraphes et cellules          |
+| `CLEAN_URLS`        | G26 FAIL       | Retire `utm_*`, `gclid`, `fbclid`, `session*`, `token`, `auth`, `tracking`  |
+| `REDACT_SENSITIVE`  | H28 FAIL       | Remplace les emails/téléphones/IBAN/adresses par leur version masquée       |
 
 ### API
 
@@ -355,12 +367,12 @@ présent : on peut ré-appliquer le plan sans dupliquer les sections.
 DOCX volontairement non conforme (✓ dans phrase, IBAN, URL avec
 `utm_source` + `token`, pas de cartouche/objectif/glossaire) :
 
-| Étape           | Verdict     | Score   | Bloquants KO              |
-|-----------------|-------------|---------|---------------------------|
-| Avant patch     | Feu Rouge   | 55.2    | A1, A3, A4, A5, B9, H34   |
-| Après patch     | Feu Rouge   | 85.5    | A4 (acronymes — manuel)   |
+| Étape           | Verdict     | Score   | Bloquants KO                                  |
+|-----------------|-------------|---------|-----------------------------------------------|
+| Avant patch     | Feu Rouge   | 43.3    | A1, A3, A4, B5, B6, C7, C9, G26 (FAIL), H28   |
+| Après patch     | Feu Rouge   | 85.2    | C7 (acronymes — manuel)                       |
 
-A4 reste KO car développer un acronyme sans en connaître la
+C7 reste KO car développer un acronyme sans en connaître la
 signification métier ne peut pas être automatisé.
 
 ---

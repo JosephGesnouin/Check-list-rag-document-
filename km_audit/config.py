@@ -7,14 +7,15 @@ from typing import Dict
 
 
 CATEGORIES: Dict[str, str] = {
-    "A": "Identification",
-    "B": "Structure",
-    "C": "Images",
-    "D": "Tableaux",
-    "E": "Diagrammes",
-    "F": "URLs",
-    "G": "Bonnes pratiques",
+    "A": "Permettre l'identification du document",
+    "B": "Mise en forme du document et sa structure",
+    "C": "Mise en forme du texte",
+    "D": "Gestion des images",
+    "E": "Gestion des tableaux",
+    "F": "Gestion des diagrammes / schémas",
+    "G": "Gestion des URLs",
     "H": "Données sensibles",
+    "I": "Bonnes pratiques générales",
 }
 
 

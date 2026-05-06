@@ -5,10 +5,8 @@ Usage:
 
 Produces ``samples/20260506_Guidelines_KMDoc_Reference.docx``.
 
-This file is the canonical "green path" used by ``certify.py``.
-Each design choice below is annotated with the rule it satisfies so
-that future contributors understand why the structure looks the way
-it does.
+Each design choice below is annotated with the rule ID from the
+official KM typology that it satisfies.
 """
 from __future__ import annotations
 
@@ -27,8 +25,8 @@ def _add_field(doc: Document, label: str, value: str) -> None:
 def build_reference() -> Document:
     doc = Document()
 
-    # --- A1 : naming is enforced by the output filename. -------------------
-    # --- A2 : cartouche with all 10 required labels in head[:4000] --------
+    # A1 : nom de fichier au format AAAAMMJJ_Sujet_Type_Extra.ext
+    # A2 : cartouche avec les 10 labels obligatoires en head[:4000]
     doc.add_heading("Cartouche de présentation du document", level=1)
     _add_field(doc, "Auteur*", "Jane Doe (équipe Knowledge Management)")
     _add_field(doc, "Email", "jane.doe@interne.example")
@@ -44,14 +42,15 @@ def build_reference() -> Document:
     _add_field(doc, "Entité(s) opérationnelle(s) concernée(s)*", "Toutes")
     _add_field(doc, "Date d'échéance*", "Décembre 2027")
 
-    # --- A3 : explicit "Objectif" section in the head ---------------------
+    # A3 : section "Objectif" / description en tête
     doc.add_heading("Objectif du document", level=1)
     doc.add_paragraph(
         "Ce document présente les bonnes pratiques applicables à la rédaction "
         "de notes documentaires destinées à un traitement automatique."
     )
 
-    # B6 : multi-level hierarchy (level 1 + level 2) and 2..18 words per title
+    # B5 : titres descriptifs, hiérarchie multi-niveaux (H1 + H2)
+    # B6 : titres et sous-titres suffisants (densité)
     doc.add_heading("Public cible", level=2)
     doc.add_paragraph(
         "Le public cible regroupe les contributeurs internes et les "
@@ -82,9 +81,8 @@ def build_reference() -> Document:
         "et la reformulation par les outils KM."
     )
 
-    # A5 : Glossaire section with the keyword "Glossaire"
-    # A4 : First occurrence of every acronym is followed by "(Expansion)"
-    #       or appears as "(ACR)" right after its expansion.
+    # A4 : glossaire centralisé, présence du mot "Glossaire"
+    # C7 : première occurrence de chaque acronyme accompagnée de l'expansion
     doc.add_heading("Glossaire des acronymes", level=1)
     doc.add_paragraph(
         "Les acronymes utilisés dans ce document sont définis ci-dessous "

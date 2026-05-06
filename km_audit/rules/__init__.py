@@ -44,13 +44,16 @@ def run_all(parsed: ParsedDoc, settings: Settings) -> List[RuleResult]:
 
 
 # Eagerly import all rule modules so the registry is populated.
+# Order matters: rules are evaluated in registration order, so we keep the
+# official typology order A → B → C → D → E → F → G → H → I.
 from . import (  # noqa: E402, F401
-    identification,
-    structure,
-    images,
-    tables,
-    diagrams,
-    urls,
-    practices,
-    sensitive as sensitive_rules,
+    identification,    # A
+    structure,         # B
+    text_formatting,   # C
+    images,            # D
+    tables,            # E
+    diagrams,          # F
+    urls,              # G
+    sensitive as sensitive_rules,  # H
+    practices,         # I
 )

@@ -1,4 +1,13 @@
-"""Category F – URLs."""
+"""Catégorie G — Gestion des URLs.
+
+Items officiels (3) :
+  G25 Les URLs sont-elles introduites par un texte clair expliquant
+      leur contenu ou leur objectif ?
+  G26 Les URLs ont-elles été nettoyées (paramètres de session,
+      identifiants chiffrés, tracking) ?
+  G27 Les URLs sont-elles affichées en clair dans le texte
+      (et non masquées derrière un lien hypertexte) ?
+"""
 from __future__ import annotations
 
 from typing import List, Tuple
@@ -28,7 +37,7 @@ def clean_url(url: str) -> Tuple[str, List[str]]:
 def rule_url_context(p: ParsedDoc, _: Settings) -> RuleResult:
     if not p.urls:
         return RuleResult(
-            "F25", "F", "URLs introduites par un texte de contexte",
+            "G25", "G", "URLs introduites par un texte clair (contexte)",
             Status.PASS, Severity.MAJOR, evidence="Aucune URL",
         )
     bad = []
@@ -42,12 +51,12 @@ def rule_url_context(p: ParsedDoc, _: Settings) -> RuleResult:
                 bad.append(truncate(stripped, 80))
     if not bad:
         return RuleResult(
-            "F25", "F", "URLs introduites par un texte de contexte",
+            "G25", "G", "URLs introduites par un texte clair (contexte)",
             Status.PASS, Severity.MAJOR,
             evidence=f"{len(p.urls)} URL(s) avec contexte",
         )
     return RuleResult(
-        "F25", "F", "URLs introduites par un texte de contexte",
+        "G25", "G", "URLs introduites par un texte clair (contexte)",
         Status.FAIL, Severity.MAJOR,
         evidence=f"URL(s) seule(s) sur ligne: {', '.join(bad[:3])}",
         recommendation="Précéder chaque URL d'un texte d'introduction explicite.",
@@ -58,7 +67,7 @@ def rule_url_context(p: ParsedDoc, _: Settings) -> RuleResult:
 def rule_url_clean(p: ParsedDoc, _: Settings) -> RuleResult:
     if not p.urls:
         return RuleResult(
-            "F26", "F", "URLs nettoyées (pas de tracking)",
+            "G26", "G", "URLs nettoyées (paramètres session/tracking retirés)",
             Status.PASS, Severity.MAJOR, evidence="Aucune URL",
         )
     dirty = []
@@ -68,13 +77,13 @@ def rule_url_clean(p: ParsedDoc, _: Settings) -> RuleResult:
             dirty.append((u, cleaned, drop))
     if not dirty:
         return RuleResult(
-            "F26", "F", "URLs nettoyées (pas de tracking)",
+            "G26", "G", "URLs nettoyées (paramètres session/tracking retirés)",
             Status.PASS, Severity.MAJOR,
             evidence=f"{len(p.urls)} URL(s) sans tracking",
         )
     samples = "; ".join(f"{truncate(u, 60)} → {truncate(c, 60)}" for u, c, _ in dirty[:3])
     return RuleResult(
-        "F26", "F", "URLs nettoyées (pas de tracking)",
+        "G26", "G", "URLs nettoyées (paramètres session/tracking retirés)",
         Status.FAIL, Severity.MAJOR,
         evidence=f"{len(dirty)} URL(s) avec params (utm_/token/session): {samples}",
         recommendation="Supprimer les paramètres de tracking avant intégration.",
@@ -87,12 +96,12 @@ def rule_url_visible(p: ParsedDoc, _: Settings) -> RuleResult:
     if not p.hyperlinks:
         if p.file_type == "pdf":
             return RuleResult(
-                "F27", "F", "URL affichée en clair (pas masquée)",
+                "G27", "G", "URLs affichées en clair (pas masquées)",
                 Status.NOT_VERIFIABLE, Severity.MAJOR,
                 evidence="Hyperliens PDF non analysés",
             )
         return RuleResult(
-            "F27", "F", "URL affichée en clair (pas masquée)",
+            "G27", "G", "URLs affichées en clair (pas masquées)",
             Status.PASS, Severity.MAJOR, evidence="Aucun hyperlien",
         )
     masked = [
@@ -102,13 +111,13 @@ def rule_url_visible(p: ParsedDoc, _: Settings) -> RuleResult:
     ]
     if not masked:
         return RuleResult(
-            "F27", "F", "URL affichée en clair (pas masquée)",
+            "G27", "G", "URLs affichées en clair (pas masquées)",
             Status.PASS, Severity.MAJOR,
             evidence=f"{len(p.hyperlinks)} hyperliens, URL visible",
         )
     samples = "; ".join(f"'{truncate(d, 30)}' → {truncate(t, 60)}" for d, t in masked[:3])
     return RuleResult(
-        "F27", "F", "URL affichée en clair (pas masquée)",
+        "G27", "G", "URLs affichées en clair (pas masquées)",
         Status.FAIL, Severity.MAJOR,
         evidence=f"{len(masked)} lien(s) masqué(s): {samples}",
         recommendation="Afficher l'URL complète plutôt qu'un texte d'ancre.",

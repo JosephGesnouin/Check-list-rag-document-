@@ -222,16 +222,23 @@ def _render_rules_doc():
 
 
 _RULES_DOC = {
-    "A": "A1 nommage, A2 cartouche, A3 objectif, A4 acronymes 1re occurrence, A5 glossaire (BLOQUANT).",
-    "B": "B6 hiérarchie de titres, B7 densité de titres, B8 textboxes inutiles (PPTX), B9 symboles dans phrases.",
-    "C": "C10 légendes d'images, C11 résolution + variance Laplacien (flou).",
-    "D": "D12 fusions, D13 bordures (XLSX), D14 en-têtes en gras, D15 titres/légendes, D16 symboles, "
-         "D17 pagination (NV), D18 tableau natif vs image.",
-    "E": "E19 lisibilité diagrammes (heuristique PPTX: nb shapes, libellés génériques).",
-    "F": "F25 contexte autour des URLs, F26 nettoyage (utm/token/session), F27 URL en clair.",
-    "G": "G28 coupures, G29 DOCX préféré, G30 longueur, G31 en-têtes/pieds, G32 phrases courtes, "
-         "G33 alignement, G34 longueur paragraphes.",
-    "H": "H34 détection emails / téléphones / IBAN / adresses / identifiants client (masqués dans le rapport).",
+    "A": "A1 nommage du fichier, A2 cartouche/métadonnées renseignées, A3 objectif décrit, "
+         "A4 glossaire centralisé (BLOQUANT).",
+    "B": "B5 titres descriptifs, hiérarchisés et formatés, B6 densité de titres et sous-titres "
+         "(BLOQUANT).",
+    "C": "C7 acronymes développés à la 1re apparition, C8 pas de textbox inutiles (PPTX), "
+         "C9 pas de symboles/icônes dans les phrases (BLOQUANT).",
+    "D": "D10 légende sous chaque image informative, D11 qualité (résolution + variance Laplacien).",
+    "E": "E12 pas de cellules fusionnées, E13 bordures, E14 en-têtes mis en valeur, "
+         "E15 titre au-dessus, E16 légende descriptive, E17 symboles → mots, "
+         "E18 pagination (NV), E19 format natif (BLOQUANT).",
+    "F": "F20 noms précis (pas 'Étape 1'), F21 structures allégées, F22 sous-diagrammes, "
+         "F23 alternative texte, F24 légende explicative (heuristiques PPTX).",
+    "G": "G25 contexte autour des URLs, G26 nettoyage (utm/token/session), G27 URL en clair.",
+    "H": "H28 détection emails / téléphones / IBAN / adresses / identifiants client "
+         "(masqués dans le rapport, BLOQUANT).",
+    "I": "I29 coupures, I30 DOCX préféré, I31 longueur de doc, I32 en-têtes/pieds, "
+         "I33 phrases courtes, I34 alignement, I35 longueur de paragraphes.",
 }
 
 
