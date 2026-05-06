@@ -229,7 +229,8 @@ _RULES_DOC = {
          "D17 pagination (NV), D18 tableau natif vs image.",
     "E": "E19 lisibilité diagrammes (heuristique PPTX: nb shapes, libellés génériques).",
     "F": "F25 contexte autour des URLs, F26 nettoyage (utm/token/session), F27 URL en clair.",
-    "G": "G28 coupures, G29 DOCX préféré, G30 longueur, G31 en-têtes/pieds, G32 phrases courtes, G33 alignement.",
+    "G": "G28 coupures, G29 DOCX préféré, G30 longueur, G31 en-têtes/pieds, G32 phrases courtes, "
+         "G33 alignement, G34 longueur paragraphes.",
     "H": "H34 détection emails / téléphones / IBAN / adresses / identifiants client (masqués dans le rapport).",
 }
 

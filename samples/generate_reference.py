@@ -1,0 +1,115 @@
+"""Generate a reference DOCX that passes every blocking rule.
+
+Usage:
+    python3 samples/generate_reference.py
+
+Produces ``samples/20260506_Guidelines_KMDoc_Reference.docx``.
+
+This file is the canonical "green path" used by ``certify.py``.
+Each design choice below is annotated with the rule it satisfies so
+that future contributors understand why the structure looks the way
+it does.
+"""
+from __future__ import annotations
+
+import os
+
+from docx import Document
+
+
+REF_FILENAME = "20260506_Guidelines_KMDoc_Reference.docx"
+
+
+def _add_field(doc: Document, label: str, value: str) -> None:
+    doc.add_paragraph(f"{label} : {value}")
+
+
+def build_reference() -> Document:
+    doc = Document()
+
+    # --- A1 : naming is enforced by the output filename. -------------------
+    # --- A2 : cartouche with all 10 required labels in head[:4000] --------
+    doc.add_heading("Cartouche de présentation du document", level=1)
+    _add_field(doc, "Auteur*", "Jane Doe (équipe Knowledge Management)")
+    _add_field(doc, "Email", "jane.doe@interne.example")
+    _add_field(doc, "Equipe propriétaire du document*",
+               "KM (Knowledge Management) — direction Documentation")
+    _add_field(doc, "Thème du document*", "Bonnes pratiques de rédaction documentaire")
+    _add_field(doc, "Type de document*", "Guide de référence")
+    _add_field(doc, "Description succincte du document*",
+               "Référence interne pour la rédaction de notes documentaires.")
+    _add_field(doc, "Mot clés associés au document*",
+               "Knowledge Management, qualité, rédaction, structuration")
+    _add_field(doc, "Périmètre géographique*", "France")
+    _add_field(doc, "Entité(s) opérationnelle(s) concernée(s)*", "Toutes")
+    _add_field(doc, "Date d'échéance*", "Décembre 2027")
+
+    # --- A3 : explicit "Objectif" section in the head ---------------------
+    doc.add_heading("Objectif du document", level=1)
+    doc.add_paragraph(
+        "Ce document présente les bonnes pratiques applicables à la rédaction "
+        "de notes documentaires destinées à un traitement automatique."
+    )
+
+    # B6 : multi-level hierarchy (level 1 + level 2) and 2..18 words per title
+    doc.add_heading("Public cible", level=2)
+    doc.add_paragraph(
+        "Le public cible regroupe les contributeurs internes et les "
+        "relecteurs qualité de la base documentaire."
+    )
+
+    doc.add_heading("Périmètre fonctionnel", level=2)
+    doc.add_paragraph(
+        "Le périmètre couvre la rédaction, la structuration et la "
+        "publication de notes documentaires courtes."
+    )
+
+    doc.add_heading("Bonnes pratiques de structuration", level=1)
+    doc.add_paragraph(
+        "Les pratiques décrites favorisent la lisibilité humaine et "
+        "l'intelligibilité par des outils automatiques."
+    )
+
+    doc.add_heading("Hiérarchie des titres", level=2)
+    doc.add_paragraph(
+        "Chaque section utilise un titre descriptif et hiérarchisé avec "
+        "des niveaux cohérents tout au long du document."
+    )
+
+    doc.add_heading("Concision des phrases", level=2)
+    doc.add_paragraph(
+        "Les phrases restent courtes et claires pour faciliter la lecture "
+        "et la reformulation par les outils KM."
+    )
+
+    # A5 : Glossaire section with the keyword "Glossaire"
+    # A4 : First occurrence of every acronym is followed by "(Expansion)"
+    #       or appears as "(ACR)" right after its expansion.
+    doc.add_heading("Glossaire des acronymes", level=1)
+    doc.add_paragraph(
+        "Les acronymes utilisés dans ce document sont définis ci-dessous "
+        "pour assurer leur compréhension."
+    )
+    doc.add_paragraph("KM (Knowledge Management) : gestion de la connaissance organisationnelle.")
+    doc.add_paragraph("IA (Intelligence Artificielle) : ensemble de modèles automatiques de traitement.")
+
+    doc.add_heading("Synthèse et recommandations", level=1)
+    doc.add_paragraph(
+        "Une rédaction structurée et lisible reste la meilleure garantie "
+        "d'une bonne intégration dans les outils KM et IA."
+    )
+
+    return doc
+
+
+def main() -> str:
+    doc = build_reference()
+    out_dir = os.path.dirname(os.path.abspath(__file__))
+    out_path = os.path.join(out_dir, REF_FILENAME)
+    doc.save(out_path)
+    print(f"Generated: {out_path}")
+    return out_path
+
+
+if __name__ == "__main__":
+    main()

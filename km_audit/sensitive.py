@@ -35,16 +35,23 @@ def mask_iban(s: str) -> str:
     return s[:2] + "***" + s[-4:]
 
 
-def detect_sensitive(text: str, head_chars: int = 3000) -> Dict[str, List[str]]:
+def mask_address(_: str) -> str:
+    return "[adresse retirée]"
+
+
+def detect_sensitive(text: str, head_chars: int = 2000) -> Dict[str, List[str]]:
     """Return a dict of category -> list of (raw) matches.
 
-    Author/contact emails appearing in the document head (typical cartouche
-    location) are excluded from the email category – they're allowed.
+    Heuristique « auteur » : un email présent dans la zone cartouche
+    (premiers ``head_chars`` caractères) est considéré comme l'email de
+    l'auteur uniquement si le label « Auteur » apparaît dans cette même
+    zone. Cela évite de blanchir les emails externes lorsque le document
+    n'a pas de cartouche identifiable.
     """
     head = text[:head_chars]
     author_emails = set()
-    for em in EMAIL_RE.findall(head):
-        if re.search(r"(auteur|email|contact)", head[: head.find(em) + 1], re.IGNORECASE):
+    if re.search(r"\bauteur\b", head, re.IGNORECASE):
+        for em in EMAIL_RE.findall(head):
             author_emails.add(em)
 
     emails = [e for e in EMAIL_RE.findall(text) if e not in author_emails]

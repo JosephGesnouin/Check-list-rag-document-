@@ -27,7 +27,13 @@ from .config import (
     URL_RE,
 )
 from .models import DocumentAuditResult, RuleResult, Status
-from .sensitive import detect_sensitive, mask_email, mask_iban, mask_phone
+from .sensitive import (
+    detect_sensitive,
+    mask_address,
+    mask_email,
+    mask_iban,
+    mask_phone,
+)
 
 try:
     from docx import Document as DocxDocument
@@ -355,6 +361,10 @@ def _docx_redact_sensitive(doc) -> None:
         masks[ph] = mask_phone(ph)
     for ib in findings.get("ibans", []):
         masks[ib] = mask_iban(ib)
+    for addr in findings.get("addresses", []):
+        masks[addr] = mask_address(addr)
+    for cid in findings.get("client_ids", []):
+        masks[cid] = "[id client retiré]"
 
     for para in _docx_paragraphs_iter(doc):
         text = para.text or ""

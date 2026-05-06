@@ -139,6 +139,9 @@ def _load_docx(p: ParsedDoc) -> None:
                 p.urls.append(target)
                 p.hyperlinks.append((target, target))
 
+    # URLs présentes en texte brut (sans hyperlien Word).
+    p.urls.extend(URL_RE.findall("\n".join(body_paragraphs)))
+
     try:
         for shape in doc.inline_shapes:
             p.images.append({"width": int(shape.width or 0), "height": int(shape.height or 0)})

@@ -113,6 +113,7 @@ def rule_acronyms(p: ParsedDoc, _: Settings) -> RuleResult:
         if not (
             re.search(rf"{ac}\s*\(([^)]+)\)", window)
             or re.search(rf"{ac}\s*[:\-–]\s*[A-Za-zÀ-ÿ]", window)
+            or re.search(rf"[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-]{{2,}}\s*\(\s*{ac}\s*\)", window)
         ):
             undocumented.append(ac)
     if not undocumented:

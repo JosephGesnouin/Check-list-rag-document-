@@ -244,6 +244,7 @@ soit le score.
 | G31 | Bonnes pratiques  | Pas d'en-têtes/pieds de page superflus                 | MIN      | non        |
 | G32 | Bonnes pratiques  | Phrases courtes et simples                             | MIN      | non        |
 | G33 | Bonnes pratiques  | Alignement à gauche (PPT/PDF)                          | MIN      | non        |
+| G34 | Bonnes pratiques  | Paragraphes ≤ `max_paragraph_chars`                    | MIN      | non        |
 | H34 | Données sensibles | Aucune donnée client / personnelle détectée            | B        | oui        |
 
 ### Détection des données sensibles (H34)
@@ -440,20 +441,37 @@ scoring/reporting consomment les `RuleResult` indifféremment.
 
 ## Self-check et tests
 
+### Self-check (rapide, sans I/O)
+
 ```bash
 python3 app.py --self-check
 ```
 
-Vérifie :
+Vérifie regex de nommage, nettoyage d'URL, masquage email/IBAN et
+intégrité de la dataclass `Settings`.
 
-- regex de nommage (cas conforme + cas invalide),
-- nettoyage d'URL (drop des paramètres de tracking, conservation des
-  paramètres métier),
-- masquage des emails et IBAN,
-- intégrité de la dataclass `Settings`.
+### Certification end-to-end
 
-Pour un test plus poussé, l'idée est de générer un DOCX synthétique
-non conforme avec `python-docx`, le passer dans `audit_document`,
-appliquer `patch_document` et vérifier que la deuxième passe d'audit
-améliore le score. Cf. la section *Test d'intégration de référence*
-ci-dessus pour les chiffres attendus.
+```bash
+python3 certify.py
+```
+
+Régénère deux échantillons (`samples/20260506_Guidelines_KMDoc_Reference.docx`
+et `samples/guidelines.docx`) puis exécute 22 assertions couvrant le
+chemin vert, le chemin rouge, la remédiation (avec idempotence), la
+génération PDF/ZIP/Markdown et la registry.
+
+Voir [CERTIFICATION.md](CERTIFICATION.md) pour le détail du dernier
+résultat (22/22 PASS, score Feu Vert 98.6 sur la référence, score
+44.2 → 86.5 après remédiation automatique du document non conforme).
+
+### Document de référence
+
+```bash
+python3 samples/generate_reference.py     # crée le DOCX vert
+python3 samples/generate_bad.py           # crée le DOCX rouge
+```
+
+Les générateurs sont idempotents et chaque structure (cartouche,
+glossaire, anti-patterns) est annotée avec la règle qu'elle vise à
+satisfaire ou à enfreindre.

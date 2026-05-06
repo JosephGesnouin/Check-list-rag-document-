@@ -101,6 +101,26 @@ def rule_short_sentences(p: ParsedDoc, settings: Settings) -> RuleResult:
 
 
 @register
+def rule_max_paragraph_length(p: ParsedDoc, settings: Settings) -> RuleResult:
+    too_long = [t for t in p.text_blocks if len(t) > settings.max_paragraph_chars]
+    if not too_long:
+        return RuleResult(
+            "G34", "G", "Paragraphes de longueur raisonnable",
+            Status.PASS, Severity.MINOR,
+            evidence=f"Aucun paragraphe > {settings.max_paragraph_chars} chars",
+        )
+    return RuleResult(
+        "G34", "G", "Paragraphes de longueur raisonnable",
+        Status.WARN, Severity.MINOR,
+        evidence=(
+            f"{len(too_long)} paragraphe(s) > {settings.max_paragraph_chars} chars "
+            f"(max observé: {max(len(t) for t in too_long)})"
+        ),
+        recommendation="Découper les paragraphes longs en blocs courts pour faciliter le RAG.",
+    )
+
+
+@register
 def rule_left_alignment(p: ParsedDoc, _: Settings) -> RuleResult:
     if p.file_type not in {"pptx", "pdf"}:
         return RuleResult(
