@@ -81,10 +81,14 @@ def rule_textboxes(p: ParsedDoc, _: Settings) -> RuleResult:
 @register
 def rule_no_symbols_in_sentences(p: ParsedDoc, _: Settings) -> RuleResult:
     offenders = []
-    for block in p.text_blocks:
+    locations = []
+    for idx, block in enumerate(p.text_blocks):
+        loc = p.locate(idx)
         for line in block.splitlines():
             if EMOJI_OR_SYMBOL_RE.search(line) and len(line.split()) >= 4:
                 offenders.append(truncate(line, 120))
+                if loc:
+                    locations.append(loc)
                 if len(offenders) >= 5:
                     break
         if len(offenders) >= 5:
@@ -98,6 +102,7 @@ def rule_no_symbols_in_sentences(p: ParsedDoc, _: Settings) -> RuleResult:
         "C9", "C", "Pas de logos/symboles/icônes dans les phrases",
         Status.FAIL, Severity.BLOCKER,
         evidence=" | ".join(offenders),
+        location="; ".join(dict.fromkeys(locations)),
         recommendation="Remplacer les symboles (✓, ➜, etc.) par des mots équivalents.",
         remediable=True,
     )

@@ -29,7 +29,7 @@ def compute(rules: List[RuleResult], settings: Settings) -> Tuple[float, str]:
         + _ratio(practices) * settings.weight_practices
     )
 
-    if any(r.is_blocker_fail() for r in rules):
+    if any(r.is_blocker_fail() for r in rules) or score < settings.score_orange_floor:
         verdict = "Feu Rouge"
     elif score >= settings.score_pass_threshold:
         verdict = "Feu Vert"

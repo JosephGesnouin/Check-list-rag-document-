@@ -41,7 +41,9 @@ def rule_url_context(p: ParsedDoc, _: Settings) -> RuleResult:
             Status.PASS, Severity.MAJOR, evidence="Aucune URL",
         )
     bad = []
-    for block in p.text_blocks:
+    locations = []
+    for idx, block in enumerate(p.text_blocks):
+        loc = p.locate(idx)
         for line in block.splitlines():
             stripped = line.strip()
             if not stripped:
@@ -49,6 +51,8 @@ def rule_url_context(p: ParsedDoc, _: Settings) -> RuleResult:
             m = URL_RE.match(stripped)
             if m and (m.end() - m.start()) >= len(stripped) - 5:
                 bad.append(truncate(stripped, 80))
+                if loc:
+                    locations.append(loc)
     if not bad:
         return RuleResult(
             "G25", "G", "URLs introduites par un texte clair (contexte)",
@@ -59,6 +63,7 @@ def rule_url_context(p: ParsedDoc, _: Settings) -> RuleResult:
         "G25", "G", "URLs introduites par un texte clair (contexte)",
         Status.FAIL, Severity.MAJOR,
         evidence=f"URL(s) seule(s) sur ligne: {', '.join(bad[:3])}",
+        location="; ".join(dict.fromkeys(locations)),
         recommendation="Précéder chaque URL d'un texte d'introduction explicite.",
     )
 

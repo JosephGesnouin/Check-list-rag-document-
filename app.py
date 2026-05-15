@@ -76,7 +76,11 @@ def _settings_panel() -> Settings:
         float(s["min_headings_per_pages"]), 0.1,
     )
     s["score_pass_threshold"] = st.sidebar.slider(
-        "Seuil de conformité (Feu Vert)", 0, 100, s["score_pass_threshold"]
+        "Seuil Feu Vert (score ≥ ...)", 0, 100, s["score_pass_threshold"]
+    )
+    s["score_orange_floor"] = st.sidebar.slider(
+        "Seuil Feu Orange (score < ... ⇒ Rouge)", 0, 100,
+        s["score_orange_floor"],
     )
     s["weight_blocking"] = st.sidebar.slider(
         "Poids des règles bloquantes", 0, 100, s["weight_blocking"]
@@ -104,13 +108,34 @@ def _truncate(s: str, n: int = 220) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+def _render_legend() -> None:
+    """Legend showing the score thresholds and what each status icon means."""
+    with st.expander("ℹ️ Légende — feux et statuts", expanded=False):
+        left, right = st.columns(2)
+        with left:
+            st.markdown(
+                "**Fourchettes des feux**  \n"
+                "🟢 **Feu Vert** — score ≥ 80 ET aucun bloquant en échec  \n"
+                "🟠 **Feu Orange** — score 50-79, ou alertes sur des règles bloquantes  \n"
+                "🔴 **Feu Rouge** — au moins un bloquant en échec, ou score < 50"
+            )
+        with right:
+            st.markdown(
+                "**Statuts par règle**  \n"
+                "✅ **PASS** — conforme à la règle  \n"
+                "⚠️ **WARN** — alerte, à vérifier  \n"
+                "❌ **FAIL** — non conforme  \n"
+                "❔ **N/V** — non vérifiable automatiquement (à revoir manuellement)"
+            )
+
+
 def _render_summary(res: DocumentAuditResult) -> None:
     badge = _VERDICT_BADGE.get(res.verdict, "⚪")
     cols = st.columns([3, 1, 1, 1])
     cols[0].markdown(f"### {badge} **{res.file_name}**  \n_{res.verdict}_")
     cols[1].metric("Score", f"{res.score}/100")
     cols[2].metric("Bloquants KO", len(res.blocking_failures))
-    cols[3].metric("Avertissements", len(res.warnings))
+    cols[3].metric("Alertes", len(res.warnings))
     if res.parse_error:
         st.warning(res.parse_error)
     if res.blocking_failures:
@@ -121,7 +146,7 @@ def _render_summary(res: DocumentAuditResult) -> None:
 
 
 def _render_rules_detail(res: DocumentAuditResult) -> None:
-    with st.expander("Détail des règles", expanded=False):
+    with st.expander("Détails de l'analyse", expanded=False):
         for cat_code, cat_label in CATEGORIES.items():
             cat_rules = [r for r in res.rules if r.category == cat_code]
             if not cat_rules:
@@ -129,11 +154,16 @@ def _render_rules_detail(res: DocumentAuditResult) -> None:
             st.markdown(f"**{cat_code} – {cat_label}**")
             for r in cat_rules:
                 icon = _STATUS_ICON.get(r.status, "•")
+                location_line = (
+                    f"  \n&nbsp;&nbsp;Localisation : {_truncate(r.location)}"
+                    if r.location else ""
+                )
                 st.markdown(
                     f"{icon} `{r.rule_id}` **{r.title}**  "
-                    f"_(sévérité: {r.severity.value})_  \n"
-                    f"&nbsp;&nbsp;Preuve: {_truncate(r.evidence) or '—'}  \n"
-                    f"&nbsp;&nbsp;Reco: {_truncate(r.recommendation) or '—'}"
+                    f"_(sévérité: {r.severity.value})_"
+                    f"{location_line}  \n"
+                    f"&nbsp;&nbsp;Constat : {_truncate(r.evidence) or '—'}  \n"
+                    f"&nbsp;&nbsp;Reco : {_truncate(r.recommendation) or '—'}"
                 )
 
 
@@ -248,8 +278,9 @@ _RULES_DOC = {
 
 def main() -> None:
     st.set_page_config(page_title="KM Document Audit", page_icon="📋", layout="wide")
-    st.title("📋 KM Document Audit – Quality Gate IA-readiness")
+    st.title("📋 KM Document Audit – Quality Gate IA-Readiness")
     st.caption("Audit local et offline – aucun appel réseau.")
+    _render_legend()
 
     settings = _settings_panel()
     settings_key = settings.cache_key()
@@ -285,11 +316,12 @@ def main() -> None:
                     pdf_bytes = generate_pdf_report(res)
                     reports.append((pdf_filename(res.file_name), pdf_bytes))
                     st.download_button(
-                        f"📄 Générer PDF – {res.file_name}",
+                        f"📄 Télécharger le rapport d'audit (PDF) – {res.file_name}",
                         data=pdf_bytes,
                         file_name=pdf_filename(res.file_name),
                         mime="application/pdf",
                         key=f"pdf::{res.file_name}",
+                        help="Le rapport d'audit est un PDF. Le document source reste dans son format d'origine.",
                     )
             if len(reports) > 1:
                 st.markdown("---")

@@ -28,9 +28,10 @@ class Settings:
     min_image_width: int = 500
     min_image_height: int = 350
     blur_variance_threshold: float = 80.0
-    long_doc_pages: int = 10
+    long_doc_pages: int = 20
     min_headings_per_pages: float = 0.5
     score_pass_threshold: int = 80
+    score_orange_floor: int = 50
     weight_blocking: int = 70
     weight_practices: int = 30
 

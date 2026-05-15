@@ -46,7 +46,7 @@ def rule_format_preference(p: ParsedDoc, _: Settings) -> RuleResult:
         "I30", "I", "Format DOCX privilégié",
         Status.WARN, Severity.MINOR,
         evidence=f"Format actuel: {p.file_type.upper()}",
-        recommendation="Privilégier DOCX pour la maintenabilité du contenu KM.",
+        recommendation="Si possible, privilégier DOCX pour la maintenabilité du contenu.",
     )
 
 
@@ -61,7 +61,7 @@ def rule_doc_length(p: ParsedDoc, settings: Settings) -> RuleResult:
         "I31", "I", "Document de longueur raisonnable",
         Status.WARN, Severity.MINOR,
         evidence=f"{p.pages} pages (> {settings.long_doc_pages})",
-        recommendation="Découper le document en plusieurs livrables thématiques.",
+        recommendation="Si possible, découper le document en plusieurs livrables thématiques.",
     )
 
 
@@ -126,7 +126,7 @@ def rule_max_paragraph_length(p: ParsedDoc, settings: Settings) -> RuleResult:
             f"{len(too_long)} paragraphe(s) > {settings.max_paragraph_chars} chars "
             f"(max observé: {max(len(t) for t in too_long)})"
         ),
-        recommendation="Découper les paragraphes longs en blocs courts pour faciliter le RAG.",
+        recommendation="Découper les paragraphes longs en blocs courts pour faciliter la recherche par l'outil.",
     )
 
 

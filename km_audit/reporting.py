@@ -36,11 +36,11 @@ USABLE_WIDTH = A4[0] - 2 * PAGE_MARGIN  # 18 cm
 # 5-column layout for the per-category rule tables, fits USABLE_WIDTH.
 # Severity uses 3-letter codes (BLOC/MAJ/MIN) so the column stays narrow
 # and the rule title gets more horizontal room.
-COL_RULE = 6.4 * cm
+COL_RULE = 5.4 * cm
 COL_STATUS = 1.2 * cm
 COL_SEVERITY = 1.2 * cm
-COL_EVIDENCE = 4.6 * cm
-COL_RECO = USABLE_WIDTH - COL_RULE - COL_STATUS - COL_SEVERITY - COL_EVIDENCE
+COL_LOCATION = 3.2 * cm
+COL_EVIDENCE_RECO = USABLE_WIDTH - COL_RULE - COL_STATUS - COL_SEVERITY - COL_LOCATION
 
 
 # ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
     h3 = ParagraphStyle("h3", parent=styles["Heading3"], spaceAfter=4)
 
     flow: List[Any] = [
-        Paragraph("Rapport d'audit KM / IA-readiness", h1),
+        Paragraph("Rapport d'audit KM / IA-Readiness", h1),
         Spacer(1, 0.2 * cm),
     ]
 
@@ -213,6 +213,47 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
                               styles["BodyText"]))
         flow.append(Spacer(1, 0.3 * cm))
 
+    # ---- Légende : feux + statuts ---------------------------------------
+    legend_rows = [
+        [
+            _cell("Verdict", _CELL_HEADER),
+            _cell("Fourchette de score", _CELL_HEADER),
+            _cell("Statut", _CELL_HEADER),
+            _cell("Sens", _CELL_HEADER),
+        ],
+        [
+            _cell_html("<font color='#2e7d32'><b>● Feu Vert</b></font>", _CELL),
+            _cell("≥ 80 ET aucun bloquant en échec"),
+            _cell_html("<font color='#2e7d32'><b>PASS</b></font>", _CELL),
+            _cell("Conforme à la règle"),
+        ],
+        [
+            _cell_html("<font color='#ef6c00'><b>● Feu Orange</b></font>", _CELL),
+            _cell("50 – 79, ou WARN sur règles bloquantes"),
+            _cell_html("<font color='#ef6c00'><b>WARN</b></font>", _CELL),
+            _cell("Alerte – à vérifier"),
+        ],
+        [
+            _cell_html("<font color='#c62828'><b>● Feu Rouge</b></font>", _CELL),
+            _cell("Au moins un bloquant en FAIL, ou score < 50"),
+            _cell_html("<font color='#c62828'><b>FAIL</b></font>", _CELL),
+            _cell("Non conforme"),
+        ],
+        [
+            _cell(""), _cell(""),
+            _cell_html("<font color='#616161'><b>N/V</b></font>", _CELL),
+            _cell("Non vérifiable automatiquement (à revoir manuellement)"),
+        ],
+    ]
+    legend = Table(
+        legend_rows,
+        colWidths=[3.5 * cm, 5.5 * cm, 2.0 * cm, USABLE_WIDTH - 11.0 * cm],
+        repeatRows=1,
+    )
+    legend.setStyle(_table_style(header_color="#37474f"))
+    flow.append(legend)
+    flow.append(Spacer(1, 0.4 * cm))
+
     # ---- Synthèse des bloquants -----------------------------------------
     flow.append(Paragraph("Synthèse des non-conformités", h2))
     blockers = result.blocking_failures
@@ -221,10 +262,12 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
             _cell("Règle", _CELL_HEADER),
             _cell("Catégorie", _CELL_HEADER),
             _cell("Sévérité", _CELL_HEADER),
-            _cell("Preuve / Recommandation", _CELL_HEADER),
+            _cell("Localisation / Recommandation", _CELL_HEADER),
         ]]
         for r in blockers:
+            loc_line = f"<i>Localisation :</i> {escape(r.location)}<br/>" if r.location else ""
             evidence_html = (
+                f"{loc_line}"
                 f"<b>{escape(r.evidence) or '—'}</b><br/>{escape(r.recommendation) or ''}"
             )
             rows.append([
@@ -246,7 +289,7 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
     flow.append(Spacer(1, 0.5 * cm))
 
     # ---- Détail par catégorie -------------------------------------------
-    flow.append(Paragraph("Détail par catégorie", h2))
+    flow.append(Paragraph("Détails de l'analyse", h2))
     for cat_code, cat_label in CATEGORIES.items():
         cat_rules = [r for r in result.rules if r.category == cat_code]
         if not cat_rules:
@@ -256,10 +299,14 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
             _cell("Règle", _CELL_HEADER),
             _cell("Statut", _CELL_HEADER),
             _cell("Sévérité", _CELL_HEADER),
-            _cell("Preuve", _CELL_HEADER),
-            _cell("Recommandation", _CELL_HEADER),
+            _cell("Localisation", _CELL_HEADER),
+            _cell("Constat / Recommandation", _CELL_HEADER),
         ]]
         for r in cat_rules:
+            evidence_block = (
+                f"<b>{escape(r.evidence) or '—'}</b>"
+                + (f"<br/>{escape(r.recommendation)}" if r.recommendation else "")
+            )
             rows.append([
                 _cell_html(
                     f"<b>{escape(r.rule_id)}</b> {escape(r.title)}",
@@ -267,12 +314,12 @@ def generate_pdf_report(result: DocumentAuditResult) -> bytes:
                 ),
                 _status_cell(r.status),
                 _cell(_SEVERITY_LABEL.get(r.severity.value, r.severity.value)),
-                _cell(r.evidence),
-                _cell(r.recommendation),
+                _cell(r.location),
+                _cell_html(evidence_block, _CELL),
             ])
         t = Table(
             rows,
-            colWidths=[COL_RULE, COL_STATUS, COL_SEVERITY, COL_EVIDENCE, COL_RECO],
+            colWidths=[COL_RULE, COL_STATUS, COL_SEVERITY, COL_LOCATION, COL_EVIDENCE_RECO],
             repeatRows=1,
         )
         t.setStyle(_table_style())

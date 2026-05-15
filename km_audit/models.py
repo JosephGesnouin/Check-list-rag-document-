@@ -42,6 +42,10 @@ class ParsedDoc:
     raw_bytes: bytes
 
     text_blocks: List[str] = field(default_factory=list)
+    # Localisation lisible par humain pour chaque ``text_blocks`` (même
+    # taille). Exemples : "Slide 3", "Page 2", "Section: Glossaire",
+    # "Feuille: Données". Sert à enrichir ``RuleResult.location``.
+    text_block_locations: List[str] = field(default_factory=list)
     headings: List[Tuple[int, str]] = field(default_factory=list)
     tables: List[Dict[str, Any]] = field(default_factory=list)
     images: List[Dict[str, Any]] = field(default_factory=list)
@@ -50,6 +54,12 @@ class ParsedDoc:
     pages: int = 0
     extra: Dict[str, Any] = field(default_factory=dict)
     parse_warning: Optional[str] = None
+
+    def locate(self, block_index: int) -> str:
+        """Return a human-readable location for the n-th text block."""
+        if 0 <= block_index < len(self.text_block_locations):
+            return self.text_block_locations[block_index]
+        return ""
 
 
 @dataclass

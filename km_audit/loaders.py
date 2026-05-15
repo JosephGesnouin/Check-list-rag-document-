@@ -93,16 +93,23 @@ def _load_docx(p: ParsedDoc) -> None:
     doc = DocxDocument(io.BytesIO(p.raw_bytes))
 
     body_paragraphs = []
+    locations = []
+    current_section = "Introduction"
+    para_count = 0
     for para in doc.paragraphs:
         text = (para.text or "").strip()
         if not text:
             continue
-        body_paragraphs.append(text)
         style_name = (para.style.name or "") if para.style else ""
         m = re.match(r"Heading\s+(\d)", style_name)
         if m:
             p.headings.append((int(m.group(1)), text))
+            current_section = text
+        para_count += 1
+        body_paragraphs.append(text)
+        locations.append(f"§{para_count} — {current_section}")
     p.text_blocks.extend(body_paragraphs)
+    p.text_block_locations.extend(locations)
 
     for tbl in doc.tables:
         rows = []
@@ -210,6 +217,7 @@ def _load_pptx(p: ParsedDoc) -> None:
 
         diagram_shape_counts.append(shape_count)
         p.text_blocks.append("\n".join(slide_text))
+        p.text_block_locations.append(f"Slide {idx}")
 
     p.urls.extend(URL_RE.findall("\n".join(p.text_blocks)))
     p.pages = len(prs.slides)
@@ -275,6 +283,7 @@ def _load_xlsx(p: ParsedDoc) -> None:
             }
         )
         p.text_blocks.append("\n".join("\t".join(r) for r in rows))
+        p.text_block_locations.append(f"Feuille: {ws.title}")
 
     p.pages = len(wb.worksheets)
 
@@ -295,6 +304,7 @@ def _load_pdf(p: ParsedDoc) -> None:
         except Exception:
             pages_text.append("")
     p.text_blocks = pages_text
+    p.text_block_locations = [f"Page {i + 1}" for i, _ in enumerate(pages_text)]
     full = "\n".join(pages_text)
     if not full.strip():
         p.parse_warning = "Texte non extractible (PDF scanné ?). OCR non pris en charge."
