@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-from ..config import ACRONYM_RE, EMOJI_OR_SYMBOL_RE, Settings
+from ..config import ACRONYM_RE, ACRONYM_STOPLIST, EMOJI_OR_SYMBOL_RE, Settings
 from ..models import ParsedDoc, RuleResult, Severity, Status
 from . import register
 from ._helpers import full_text, truncate
@@ -21,14 +21,16 @@ from ._helpers import full_text, truncate
 @register
 def rule_acronyms_first_occurrence(p: ParsedDoc, _: Settings) -> RuleResult:
     text = full_text(p)
+    # Filtrer la stop-list des mots tout-en-majuscules courants
+    # (ACCOUNT, ANNEX, BUSINESS, ...) qui ne sont PAS des acronymes.
     candidates = {
         a for a in ACRONYM_RE.findall(text)
-        if a not in {"PDF", "DOCX", "PPTX", "XLSX"}
+        if a not in {"PDF", "DOCX", "PPTX", "XLSX"} and a not in ACRONYM_STOPLIST
     }
     if not candidates:
         return RuleResult(
             "C7", "C", "Acronymes/abréviations expliqués à leur 1re apparition",
-            Status.PASS, Severity.BLOCKER, evidence="Aucun acronyme détecté",
+            Status.PASS, Severity.MAJOR, evidence="Aucun acronyme détecté",
         )
     undocumented = []
     for ac in candidates:
@@ -45,13 +47,16 @@ def rule_acronyms_first_occurrence(p: ParsedDoc, _: Settings) -> RuleResult:
     if not undocumented:
         return RuleResult(
             "C7", "C", "Acronymes/abréviations expliqués à leur 1re apparition",
-            Status.PASS, Severity.BLOCKER,
+            Status.PASS, Severity.MAJOR,
             evidence=f"{len(candidates)} acronymes détectés, tous documentés",
         )
     return RuleResult(
         "C7", "C", "Acronymes/abréviations expliqués à leur 1re apparition",
-        Status.FAIL, Severity.BLOCKER,
-        evidence=f"Non développés: {', '.join(sorted(undocumented)[:15])}",
+        Status.WARN, Severity.MAJOR,
+        evidence=(
+            f"Non développés (à confirmer manuellement, le détecteur peut "
+            f"laisser passer des faux positifs) : {', '.join(sorted(undocumented)[:15])}"
+        ),
         recommendation="Développer chaque acronyme à sa première occurrence: ACR (Définition).",
     )
 
@@ -63,11 +68,11 @@ def rule_textboxes(p: ParsedDoc, _: Settings) -> RuleResult:
         if n <= 2:
             return RuleResult(
                 "C8", "C", "Texte hors boîtes/cadres (textbox) inutiles",
-                Status.PASS, Severity.BLOCKER, evidence=f"{n} textbox(es) hors titre",
+                Status.PASS, Severity.MAJOR, evidence=f"{n} textbox(es) hors titre",
             )
         return RuleResult(
             "C8", "C", "Texte hors boîtes/cadres (textbox) inutiles",
-            Status.FAIL, Severity.BLOCKER,
+            Status.WARN, Severity.MAJOR,
             evidence=f"{n} textbox(es) hors titre détectés",
             recommendation="Limiter les zones de texte flottantes; privilégier les placeholders.",
         )
@@ -96,11 +101,11 @@ def rule_no_symbols_in_sentences(p: ParsedDoc, _: Settings) -> RuleResult:
     if not offenders:
         return RuleResult(
             "C9", "C", "Pas de logos/symboles/icônes dans les phrases",
-            Status.PASS, Severity.BLOCKER,
+            Status.PASS, Severity.MAJOR,
         )
     return RuleResult(
         "C9", "C", "Pas de logos/symboles/icônes dans les phrases",
-        Status.FAIL, Severity.BLOCKER,
+        Status.WARN, Severity.MAJOR,
         evidence=" | ".join(offenders),
         location="; ".join(dict.fromkeys(locations)),
         recommendation="Remplacer les symboles (✓, ➜, etc.) par des mots équivalents.",

@@ -88,10 +88,17 @@ def build_plan(result: DocumentAuditResult) -> RemediationPlan:
     """Translate failed/remediable rules into a concrete action list.
 
     Mapping rule_id → action :
-        A1  rename_file        A2  inject_cartouche
-        A3  inject_objective   A4  inject_glossary
-        C9  replace_symbols    E17 replace_symbols (mutualisé)
-        G26 clean_urls         H28 redact_sensitive
+        A1  rename_file
+        C9  replace_symbols  (et E17, mutualisé)
+        G26 clean_urls
+        H28 redact_sensitive
+
+    Les actions ``inject_cartouche`` / ``inject_objective`` /
+    ``inject_glossary`` restent disponibles dans ce module pour les
+    utilisateurs qui souhaitent les invoquer directement via l'API,
+    mais ne sont plus déclenchées automatiquement depuis l'audit :
+    A2 / A3 / A4 ont été retirés du périmètre suite au retour métier
+    (gérés désormais par l'interface Domino).
     """
     plan = RemediationPlan(file_name=result.file_name, file_type=result.file_type)
     failing = {
@@ -102,13 +109,10 @@ def build_plan(result: DocumentAuditResult) -> RemediationPlan:
 
     if "A1" in failing and failing["A1"].status is Status.FAIL:
         plan.actions.append(_action_rename(result, failing["A1"]))
-    if "A2" in failing:
-        plan.actions.append(_action_cartouche(result, failing["A2"]))
-    if "A3" in failing and failing["A3"].status is Status.FAIL:
-        plan.actions.append(_action_objective(failing["A3"]))
-    if "A4" in failing and failing["A4"].status is Status.FAIL:
-        plan.actions.append(_action_glossary(failing["A4"]))
-    if any(rid in failing and failing[rid].status is Status.FAIL for rid in ("C9", "E17")):
+    if any(
+        rid in failing and failing[rid].status in (Status.FAIL, Status.WARN)
+        for rid in ("C9", "E17")
+    ):
         plan.actions.append(_action_replace_symbols())
     if "G26" in failing and failing["G26"].status is Status.FAIL:
         plan.actions.append(_action_clean_urls())

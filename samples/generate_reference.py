@@ -26,23 +26,14 @@ def build_reference() -> Document:
     doc = Document()
 
     # A1 : nom de fichier au format AAAAMMJJ_Sujet_Type_Extra.ext
-    # A2 : cartouche avec les 10 labels obligatoires en head[:4000]
-    doc.add_heading("Cartouche de présentation du document", level=1)
-    _add_field(doc, "Auteur*", "Jane Doe (équipe Knowledge Management)")
-    _add_field(doc, "Email", "jane.doe@interne.example")
-    _add_field(doc, "Equipe propriétaire du document*",
-               "KM (Knowledge Management) — direction Documentation")
-    _add_field(doc, "Thème du document*", "Bonnes pratiques de rédaction documentaire")
-    _add_field(doc, "Type de document*", "Guide de référence")
-    _add_field(doc, "Description succincte du document*",
-               "Référence interne pour la rédaction de notes documentaires.")
-    _add_field(doc, "Mot clés associés au document*",
-               "Knowledge Management, qualité, rédaction, structuration")
-    _add_field(doc, "Périmètre géographique*", "France")
-    _add_field(doc, "Entité(s) opérationnelle(s) concernée(s)*", "Toutes")
-    _add_field(doc, "Date d'échéance*", "Décembre 2027")
+    # H29 : étiquette de confidentialité Public ou Interne
+    doc.add_heading("Métadonnées du document", level=1)
+    _add_field(doc, "Auteur", "Jane Doe (équipe Knowledge Management)")
+    _add_field(doc, "Sensibilité", "Public")
 
-    # A3 : section "Objectif" / description en tête
+    # Section "Objectif" — utile pour la lisibilité humaine, même si A3
+    # a été retiré du périmètre de l'audit automatique (géré désormais
+    # par l'interface Domino).
     doc.add_heading("Objectif du document", level=1)
     doc.add_paragraph(
         "Ce document présente les bonnes pratiques applicables à la rédaction "
@@ -81,7 +72,6 @@ def build_reference() -> Document:
         "et la reformulation par les outils KM."
     )
 
-    # A4 : glossaire centralisé, présence du mot "Glossaire"
     # C7 : première occurrence de chaque acronyme accompagnée de l'expansion
     doc.add_heading("Glossaire des acronymes", level=1)
     doc.add_paragraph(

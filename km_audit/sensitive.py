@@ -10,6 +10,13 @@ from .config import (
     IBAN_RE,
     PHONE_RE,
     POSTAL_ADDR_RE,
+    URL_RE,
+)
+
+
+_PHONE_CONTEXT_RE = re.compile(
+    r"(?i)\b(?:t[ée]l(?:[ée]phone)?|phone|mobile|portable|fixe|gsm|ligne|fax)"
+    r"[\s\.:\-]+$"
 )
 
 
@@ -39,26 +46,52 @@ def mask_address(_: str) -> str:
     return "[adresse retirée]"
 
 
+def _strip_urls(text: str) -> str:
+    """Remove URLs from ``text`` so digit sequences inside them are not
+    misinterpreted as phone numbers or other sensitive patterns."""
+    return URL_RE.sub(" [URL] ", text)
+
+
+def _detect_phones(text: str) -> List[str]:
+    """Phone detection requires an explicit phone keyword right before the
+    number (within ~30 chars), to avoid false positives on dates, file
+    references or any long digit sequence."""
+    phones: List[str] = []
+    for m in PHONE_RE.finditer(text):
+        # Skip if fewer than 8 digits overall (eliminates years, page refs).
+        if len(re.sub(r"\D", "", m.group(0))) < 8:
+            continue
+        context = text[max(0, m.start() - 30): m.start()]
+        if _PHONE_CONTEXT_RE.search(context):
+            phones.append(m.group(0))
+    return phones
+
+
 def detect_sensitive(text: str, head_chars: int = 2000) -> Dict[str, List[str]]:
     """Return a dict of category -> list of (raw) matches.
 
-    Heuristique « auteur » : un email présent dans la zone cartouche
-    (premiers ``head_chars`` caractères) est considéré comme l'email de
-    l'auteur uniquement si le label « Auteur » apparaît dans cette même
-    zone. Cela évite de blanchir les emails externes lorsque le document
-    n'a pas de cartouche identifiable.
+    Heuristiques renforcées suite au retour métier :
+
+    * URLs : retirées du texte avant détection, leurs paramètres
+      numériques ne sont plus pris pour des numéros de téléphone.
+    * Téléphones : exige un mot-clé (`tél`, `téléphone`, `phone`,
+      `mobile`...) dans les 30 caractères précédents.
+    * Auteur : un email présent dans la zone cartouche est considéré
+      comme l'email de l'auteur si le label « Auteur » apparaît dans
+      cette même zone.
     """
-    head = text[:head_chars]
+    safe_text = _strip_urls(text)
+    head = safe_text[:head_chars]
     author_emails = set()
     if re.search(r"\bauteur\b", head, re.IGNORECASE):
         for em in EMAIL_RE.findall(head):
             author_emails.add(em)
 
-    emails = [e for e in EMAIL_RE.findall(text) if e not in author_emails]
-    phones = [p for p in PHONE_RE.findall(text) if len(re.sub(r"\D", "", p)) >= 8]
-    ibans = IBAN_RE.findall(text)
-    addresses = POSTAL_ADDR_RE.findall(text)
-    client_ids = CLIENT_ID_RE.findall(text)
+    emails = [e for e in EMAIL_RE.findall(safe_text) if e not in author_emails]
+    phones = _detect_phones(safe_text)
+    ibans = IBAN_RE.findall(safe_text)
+    addresses = POSTAL_ADDR_RE.findall(safe_text)
+    client_ids = CLIENT_ID_RE.findall(safe_text)
 
     return {
         "emails": emails,

@@ -126,7 +126,9 @@ def scenario_red(c: Certifier) -> Optional[DocumentAuditResult]:
     res = audit_document(BAD_FILENAME, raw, DEFAULT_SETTINGS)
     c.check("Bad doc → Feu Rouge", res.verdict == "Feu Rouge", _summarize(res))
     fail_ids = _failed_rule_ids(res)
-    expected_min = {"A1", "A3", "A4", "B5", "B6", "C7", "C9", "G26", "H28"}
+    # Après retrait de A2/A3/A4 et abaissement des sévérités, le bad
+    # doc ne devrait plus échouer en BLOCKER que sur A1, G26, H28, H29.
+    expected_min = {"A1", "G26", "H28", "H29"}
     c.check("Bad doc raises the expected blocker set",
             expected_min.issubset(set(fail_ids)),
             f"got={fail_ids}")
@@ -145,9 +147,8 @@ def scenario_remediation(c: Certifier, bad_audit: DocumentAuditResult) -> None:
     c.check("Patch produced bytes", outcome.patched_bytes is not None,
             outcome.error or "")
     c.check("Patch applied at least the expected actions",
-            {"rename_file", "inject_cartouche", "inject_objective",
-             "inject_glossary", "replace_symbols",
-             "clean_urls", "redact_sensitive"}.issubset(
+            {"rename_file", "replace_symbols", "clean_urls",
+             "redact_sensitive"}.issubset(
                 {a.kind.value for a in plan.actions}),
             f"plan kinds={[a.kind.value for a in plan.actions]}")
 
@@ -161,7 +162,7 @@ def scenario_remediation(c: Certifier, bad_audit: DocumentAuditResult) -> None:
     c.check("Re-audit reduces blocker count",
             len(re_res.blocking_failures) < len(bad_audit.blocking_failures),
             f"{len(bad_audit.blocking_failures)} -> {len(re_res.blocking_failures)}")
-    auto_remediated = {"A1", "A3", "A4", "C9", "G26", "H28"}
+    auto_remediated = {"A1", "C9", "G26", "H28"}
     remaining = {r.rule_id for r in re_res.failures}
     c.check("Auto-remediable failures are resolved",
             not (auto_remediated & remaining),
@@ -198,14 +199,14 @@ def scenario_registry(c: Certifier) -> None:
     print("\n[5] Registry — rule discovery")
     rules = all_rules()
     expected = (
-        {f"A{i}" for i in (1, 2, 3, 4)}
+        {"A1"}
         | {f"B{i}" for i in (5, 6)}
         | {f"C{i}" for i in (7, 8, 9)}
         | {f"D{i}" for i in (10, 11)}
         | {f"E{i}" for i in (12, 13, 14, 15, 16, 17, 18, 19)}
         | {f"F{i}" for i in (20, 21, 22, 23, 24)}
         | {f"G{i}" for i in (25, 26, 27)}
-        | {"H28"}
+        | {"H28", "H29"}
         | {f"I{i}" for i in (29, 30, 31, 32, 33, 34, 35)}
     )
     c.check(f"Registry has {len(expected)} rules", len(rules) == len(expected),
@@ -435,7 +436,100 @@ def main() -> int:
     scenario_registry(c)
     scenario_original_spec(c)
     scenario_review_feedback(c)
+    scenario_business_feedback(c)
     return c.summary()
+
+
+def scenario_business_feedback(c: Certifier) -> None:
+    """Verify every point from the business team's spreadsheet review."""
+    print("\n[8] Retour métier — relecture catégorie par catégorie")
+
+    from km_audit.config import ACRONYM_STOPLIST
+    from km_audit.models import ParsedDoc, Severity, Status as S
+    from km_audit.rules import all_rules
+
+    # 1. A2 / A3 / A4 removed from the registry.
+    empty = ParsedDoc(file_name="x.docx", file_type="docx", raw_bytes=b"")
+    rule_ids = set()
+    for fn in all_rules():
+        try:
+            rule_ids.add(fn(empty, DEFAULT_SETTINGS).rule_id)
+        except Exception:
+            pass
+    c.check("A2 retiré du périmètre", "A2" not in rule_ids)
+    c.check("A3 retiré du périmètre", "A3" not in rule_ids)
+    c.check("A4 retiré du périmètre", "A4" not in rule_ids)
+
+    # 2. Each requested downgrade is effective.
+    def _severity_of(rid: str) -> str:
+        for fn in all_rules():
+            r = fn(empty, DEFAULT_SETTINGS)
+            if r.rule_id == rid:
+                return r.severity.value
+        return "missing"
+    for rid in ("B5", "B6", "C7", "C9", "D10", "E12", "E19"):
+        c.check(f"{rid} downgraded to non-BLOCKER",
+                _severity_of(rid) != Severity.BLOCKER.value,
+                f"severity={_severity_of(rid)}")
+
+    # 3. C7 acronym stop-list active.
+    c.check("Stop-list C7 inclut ACCOUNT/ANNEX/BUSINESS",
+            {"ACCOUNT", "ANNEX", "BUSINESS"}.issubset(ACRONYM_STOPLIST))
+    fake = ParsedDoc(file_name="x.docx", file_type="docx", raw_bytes=b"")
+    fake.text_blocks = [
+        "Voir ACCOUNT, ANNEX et BUSINESS section pour plus de détails."
+    ]
+    from km_audit.rules.text_formatting import rule_acronyms_first_occurrence
+    r_c7 = rule_acronyms_first_occurrence(fake, DEFAULT_SETTINGS)
+    c.check("C7 ignore ACCOUNT/ANNEX/BUSINESS (PASS sans signalement)",
+            r_c7.status is S.PASS,
+            f"status={r_c7.status.value} evidence={r_c7.evidence[:80]}")
+
+    # 4. PHONE detection now requires a phone-context keyword.
+    from km_audit.sensitive import _detect_phones
+    bare_year_text = "EP_PE_TC1 COD(2022)0341_EN.pdf — Dates : 2026 et 2027"
+    c.check("PHONE: '2022)0341' + années 2026/2027 n'est plus pris pour un numéro",
+            _detect_phones(bare_year_text) == [],
+            f"matches={_detect_phones(bare_year_text)}")
+    keyword_text = "Tel : +33 6 12 34 56 78"
+    c.check("PHONE: 'Tel : +33 6 12 34 56 78' est bien détecté",
+            len(_detect_phones(keyword_text)) == 1,
+            f"matches={_detect_phones(keyword_text)}")
+
+    # 5. URLs are stripped before sensitive detection (no false positive
+    #    on digits embedded in URL parameters).
+    from km_audit.sensitive import detect_sensitive
+    url_only = "Voir https://europa.eu/doc?id=20220341 pour plus."
+    findings_url = detect_sensitive(url_only)
+    c.check("URLs retirées avant détection (pas de téléphone fantôme)",
+            not findings_url["phones"],
+            f"phones={findings_url['phones']}")
+
+    # 6. H29 sensitivity-label rule registered + behaves as expected.
+    from km_audit.rules.sensitive import rule_sensitivity_label
+    label_doc = ParsedDoc(file_name="x.docx", file_type="docx", raw_bytes=b"")
+    label_doc.text_blocks = ["Sensibilité : Public — document validé."]
+    r29_pass = rule_sensitivity_label(label_doc, DEFAULT_SETTINGS)
+    c.check("H29 PASS quand 'Sensibilité : Public'", r29_pass.status is S.PASS,
+            f"status={r29_pass.status.value}")
+
+    label_doc.text_blocks = ["Sensibilité : Confidentiel — diffusion restreinte."]
+    r29_fail = rule_sensitivity_label(label_doc, DEFAULT_SETTINGS)
+    c.check("H29 FAIL quand 'Sensibilité : Confidentiel'",
+            r29_fail.status is S.FAIL,
+            f"status={r29_fail.status.value} evidence={r29_fail.evidence}")
+
+    label_doc.text_blocks = ["Aucune étiquette ici"]
+    r29_missing = rule_sensitivity_label(label_doc, DEFAULT_SETTINGS)
+    c.check("H29 FAIL quand aucune étiquette détectée",
+            r29_missing.status is S.FAIL,
+            f"status={r29_missing.status.value}")
+
+    # 7. The bad sample now triggers H29 (no label).
+    raw = _read(BAD_FILENAME)
+    res_bad = audit_document(BAD_FILENAME, raw, DEFAULT_SETTINGS)
+    c.check("Bad doc échoue sur H29 (étiquette manquante)",
+            any(r.rule_id == "H29" and r.status is S.FAIL for r in res_bad.rules))
 
 
 if __name__ == "__main__":

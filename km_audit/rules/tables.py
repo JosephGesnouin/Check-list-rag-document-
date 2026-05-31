@@ -23,18 +23,18 @@ def rule_table_no_merge(p: ParsedDoc, _: Settings) -> RuleResult:
     if not p.tables:
         return RuleResult(
             "E12", "E", "Pas de cellules fusionnées",
-            Status.PASS, Severity.BLOCKER, evidence="Aucun tableau",
+            Status.PASS, Severity.MAJOR, evidence="Aucun tableau",
         )
     merged = [t for t in p.tables if t.get("merged")]
     if not merged:
         return RuleResult(
             "E12", "E", "Pas de cellules fusionnées",
-            Status.PASS, Severity.BLOCKER,
+            Status.PASS, Severity.MAJOR,
             evidence=f"{len(p.tables)} tableau(x) sans fusion",
         )
     return RuleResult(
         "E12", "E", "Pas de cellules fusionnées",
-        Status.FAIL, Severity.BLOCKER,
+        Status.WARN, Severity.MAJOR,
         evidence=f"{len(merged)} tableau(x) avec cellules fusionnées",
         recommendation="Dé-fusionner les cellules pour permettre une lecture machine.",
     )
@@ -188,12 +188,12 @@ def rule_table_native(p: ParsedDoc, _: Settings) -> RuleResult:
     if not p.tables and p.images and "tableau" in text_lower:
         return RuleResult(
             "E19", "E", "Tableau au format natif (pas image / capture)",
-            Status.FAIL, Severity.BLOCKER,
+            Status.WARN, Severity.MAJOR,
             evidence=f"{len(p.images)} image(s) + mentions 'tableau' mais aucun tableau natif détecté",
             recommendation="Recréer le tableau au format natif (DOCX/PPTX/XLSX).",
         )
     return RuleResult(
         "E19", "E", "Tableau au format natif (pas image / capture)",
-        Status.PASS, Severity.BLOCKER,
+        Status.PASS, Severity.MAJOR,
         evidence=f"{len(p.tables)} tableau(x) natif(s)",
     )

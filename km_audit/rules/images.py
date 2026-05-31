@@ -25,19 +25,19 @@ def rule_image_legends(p: ParsedDoc, _: Settings) -> RuleResult:
     if hint >= len(p.images):
         return RuleResult(
             "D10", "D", "Légende sous chaque image informative",
-            Status.PASS, Severity.BLOCKER,
+            Status.PASS, Severity.MAJOR,
             evidence=f"{hint} mentions de légendes / {len(p.images)} images",
         )
     if hint > 0:
         return RuleResult(
             "D10", "D", "Légende sous chaque image informative",
-            Status.WARN, Severity.BLOCKER,
+            Status.WARN, Severity.MAJOR,
             evidence=f"{hint} mentions de légendes / {len(p.images)} images",
             recommendation="Ajouter une légende explicite (Figure X – ...) sous chaque image informative.",
         )
     return RuleResult(
         "D10", "D", "Légende sous chaque image informative",
-        Status.FAIL, Severity.BLOCKER,
+        Status.WARN, Severity.MAJOR,
         evidence=f"{len(p.images)} images sans mention 'Figure/Schéma/...'",
         recommendation="Ajouter une légende (Figure X – ...) sous chaque image informative.",
     )
