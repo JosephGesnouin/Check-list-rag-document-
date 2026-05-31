@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import io
 import os
+import subprocess
 import sys
 from typing import List, Optional, Tuple
 
@@ -226,6 +227,198 @@ def scenario_registry(c: Certifier) -> None:
             f"unexpected={sorted(set(rule_ids) - expected)}")
 
 
+def scenario_original_spec(c: Certifier) -> None:
+    """Verify the original prompt requirements are still honored."""
+    print("\n[6] Spec initiale — exigences fondamentales")
+
+    # Offline only: production code must not import any network library
+    # (certify.py is excluded since it carries the literal pattern names
+    # in its test assertions).
+    proc = subprocess.run(
+        ["grep", "-rE", r"\b(requests|httpx|urllib\.request|urllib3|aiohttp)\b",
+         "--include=*.py", "km_audit", "app.py"],
+        capture_output=True, text=True,
+    )
+    c.check("Aucun import réseau (requests/httpx/urllib...)",
+            proc.returncode != 0, proc.stdout.strip()[:200])
+
+    # 4 formats supported
+    from km_audit.loaders import _LOADERS
+    c.check("Loaders DOCX/PPTX/XLSX/PDF enregistrés",
+            set(_LOADERS) == {"docx", "pptx", "xlsx", "pdf"},
+            f"loaders={sorted(_LOADERS)}")
+
+    # Verdict logic: any blocker FAIL -> Feu Rouge
+    from km_audit.models import RuleResult, Severity, Status as S
+    from km_audit.scoring import compute
+    rules = [
+        RuleResult("X1", "X", "ok", S.PASS, Severity.BLOCKER),
+        RuleResult("X2", "X", "fail", S.FAIL, Severity.BLOCKER),
+    ]
+    score, verdict = compute(rules, DEFAULT_SETTINGS)
+    c.check("Verdict: un seul bloquant FAIL ⇒ Feu Rouge", verdict == "Feu Rouge",
+            f"verdict={verdict}, score={score}")
+
+    # Scoring weights = 70/30
+    c.check("Pondération bloquantes/pratiques = 70/30",
+            DEFAULT_SETTINGS.weight_blocking == 70
+            and DEFAULT_SETTINGS.weight_practices == 30,
+            f"{DEFAULT_SETTINGS.weight_blocking}/{DEFAULT_SETTINGS.weight_practices}")
+
+    # ZIP bundle is functional
+    import zipfile
+    zip_bytes = generate_zip([("a.pdf", b"%PDF-1.4"), ("b.pdf", b"%PDF-1.4")])
+    zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+    c.check("ZIP bundle multi-fichiers valide",
+            sorted(zf.namelist()) == ["a.pdf", "b.pdf"])
+
+    # Sensitive data is masked in output (raw values must not appear)
+    from km_audit.sensitive import mask_email, mask_phone, mask_iban
+    raw_email = "alice.client@externe.example"
+    masked = mask_email(raw_email)
+    c.check("Email sensible masqué (pas de fuite du local-part)",
+            "alice.client" not in masked and "@externe.example" in masked,
+            masked)
+    c.check("IBAN sensible masqué",
+            mask_iban("FR7612345678901234567890123").startswith("FR")
+            and "1234567890" not in mask_iban("FR7612345678901234567890123"))
+    c.check("Téléphone masqué", mask_phone("+33 6 12 34 56 78").startswith("***"))
+
+    # Streamlit cache decorator is applied
+    src = open("app.py", encoding="utf-8").read()
+    c.check("Cache @st.cache_data appliqué sur l'audit",
+            "@st.cache_data" in src and "_cached_audit" in src)
+
+    # Self-check function exists
+    c.check("Fonction self_check disponible", "def self_check" in src)
+
+
+def scenario_review_feedback(c: Certifier) -> None:
+    """Verify every point from the KM reviewer's email is addressed."""
+    print("\n[7] Retour de relecture — feedback Nuria")
+
+    app_src = open("app.py", encoding="utf-8").read()
+    rep_src = open("km_audit/reporting.py", encoding="utf-8").read()
+
+    # 1. Title: 'IA-Readiness' with capital R
+    c.check("UI titre = 'IA-Readiness' (R majuscule)",
+            "IA-Readiness" in app_src and "IA-readiness" not in app_src)
+    c.check("PDF titre = 'IA-Readiness' (R majuscule)",
+            "IA-Readiness" in rep_src and "IA-readiness" not in rep_src)
+
+    # 2. Diagrams (F20) no longer reserved to PPTX
+    from km_audit.models import ParsedDoc
+    empty_docx = ParsedDoc(file_name="x.docx", file_type="docx", raw_bytes=b"")
+    empty_docx.text_blocks = ["Voici la procédure : étape 1, étape 2, étape 3."]
+    from km_audit.rules.diagrams import rule_diagram_labels
+    f20 = rule_diagram_labels(empty_docx, DEFAULT_SETTINGS)
+    c.check("F20 (libellés génériques) s'applique aussi à DOCX",
+            f20.status is Status.WARN,
+            f"status={f20.status.value}, evidence={f20.evidence[:80]}")
+
+    # 3. I30 reco softened
+    docx_doc = ParsedDoc(file_name="x.pptx", file_type="pptx", raw_bytes=b"")
+    from km_audit.rules.practices import rule_format_preference
+    i30 = rule_format_preference(docx_doc, DEFAULT_SETTINGS)
+    c.check("I30 reco adoucie ('Si possible, privilégier DOCX...')",
+            "Si possible" in i30.recommendation, i30.recommendation)
+
+    # 4. long_doc_pages default = 20
+    c.check("Seuil document long = 20 pages",
+            DEFAULT_SETTINGS.long_doc_pages == 20,
+            str(DEFAULT_SETTINGS.long_doc_pages))
+
+    # 4 bis. I31 reco softened
+    long_doc = ParsedDoc(file_name="x.docx", file_type="docx", raw_bytes=b"")
+    long_doc.pages = 25
+    from km_audit.rules.practices import rule_doc_length
+    i31 = rule_doc_length(long_doc, DEFAULT_SETTINGS)
+    c.check("I31 reco adoucie ('Si possible, découper...')",
+            "Si possible" in i31.recommendation, i31.recommendation)
+
+    # 5. No 'RAG' references anywhere (certify.py excluded: it has
+    # 'RAG' in this very assertion text).
+    proc = subprocess.run(
+        ["grep", "-rwl", "RAG", "--include=*.py", "--include=*.md",
+         "km_audit", "app.py", "README.md", "CERTIFICATION.md"],
+        capture_output=True, text=True,
+    )
+    c.check("'RAG' supprimé partout (UI, reco, docs)",
+            proc.returncode != 0, proc.stdout.strip()[:200])
+
+    # 6. Locations populated for relevant rules
+    from docx import Document
+    d = Document()
+    d.add_heading("Introduction", level=1)
+    d.add_paragraph("Le statut courant ✓ avec quelques infos.")
+    d.add_paragraph("Contact externe : someone@externe.example, IBAN FR7612345678901234567890123.")
+    d.add_paragraph("Lien brut https://x.com/p?utm_source=foo&id=1")
+    buf = io.BytesIO(); d.save(buf)
+    rr = audit_document("loc_probe.docx", buf.getvalue(), DEFAULT_SETTINGS)
+    located = {r.rule_id: r.location for r in rr.rules if r.location}
+    c.check("C9 remonte la localisation (§N — section)",
+            "C9" in located and "§" in located["C9"],
+            f"C9 location={located.get('C9', '<vide>')}")
+    c.check("H28 remonte la localisation",
+            "H28" in located and "§" in located["H28"],
+            f"H28 location={located.get('H28', '<vide>')}")
+
+    # 7. PDF + UI use 'Localisation' instead of 'Preuve'
+    c.check("Colonne PDF 'Localisation' (au lieu de 'Preuve')",
+            "Localisation" in rep_src and '"Preuve"' not in rep_src,
+            "")
+    c.check("UI affiche 'Localisation' (au lieu de 'Preuve')",
+            "Localisation" in app_src and "Preuve" not in app_src)
+
+    # 8. 'Détails de l'analyse' rename
+    c.check("UI 'Détails de l'analyse' (au lieu de 'Détail des règles')",
+            "Détails de l'analyse" in app_src
+            and "Détail des règles" not in app_src)
+    c.check("PDF 'Détails de l'analyse'",
+            "Détails de l'analyse" in rep_src)
+
+    # 9. PDF download button clarifies that source format is preserved
+    c.check("Bouton PDF clarifié ('rapport d'audit (PDF)')",
+            "rapport d'audit (PDF)" in app_src
+            and "help=" in app_src)
+
+    # 10. Verdict thresholds in PDF + UI legend
+    c.check("PDF contient une légende des fourchettes de feux",
+            "Fourchette de score" in rep_src
+            and "Feu Vert" in rep_src and "Feu Orange" in rep_src)
+    c.check("UI contient la légende des feux et statuts",
+            "_render_legend" in app_src
+            and "Fourchettes des feux" in app_src
+            and "Statuts par règle" in app_src)
+
+    # 11. 'Alertes' instead of 'Avertissements'
+    c.check("UI 'Alertes' (au lieu de 'Avertissements')",
+            '"Alertes"' in app_src and "Avertissements" not in app_src)
+
+    # 12. Status icon legend present
+    c.check("UI explique les icônes ✅ ⚠️ ❌ ❔",
+            all(s in app_src for s in ("PASS", "WARN", "FAIL", "N/V"))
+            and "✅" in app_src and "❌" in app_src)
+
+    # Bonus: score_orange_floor wired
+    c.check("Seuil 'Feu Orange floor' = 50 par défaut",
+            DEFAULT_SETTINGS.score_orange_floor == 50,
+            str(DEFAULT_SETTINGS.score_orange_floor))
+
+    # Bonus: low score without blocker fail still triggers Feu Rouge
+    from km_audit.models import RuleResult, Severity, Status as S
+    from km_audit.scoring import compute
+    low_score_rules = [
+        RuleResult("Y1", "Y", "warn", S.WARN, Severity.BLOCKER),
+        RuleResult("Y2", "Y", "fail", S.FAIL, Severity.MAJOR),
+        RuleResult("Y3", "Y", "fail", S.FAIL, Severity.MAJOR),
+    ]
+    score_, verdict_ = compute(low_score_rules, DEFAULT_SETTINGS)
+    c.check("Score < 50 sans bloquant FAIL ⇒ Feu Rouge (aligné légende)",
+            verdict_ == "Feu Rouge" and score_ < 50,
+            f"score={score_}, verdict={verdict_}")
+
+
 def main() -> int:
     # Always regenerate the samples so the harness is reproducible.
     print("Generating sample documents…")
@@ -240,6 +433,8 @@ def main() -> int:
     if ref is not None:
         scenario_outputs(c, ref)
     scenario_registry(c)
+    scenario_original_spec(c)
+    scenario_review_feedback(c)
     return c.summary()
 
 
